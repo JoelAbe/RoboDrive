@@ -80,4 +80,4 @@ DerivedDataCache/*
 
 # JetBrains Rider workspace and per-user settings
 .idea/
-*.sln.DotSettings.user
+*.DotSettings.user
