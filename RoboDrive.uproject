@@ -5,6 +5,11 @@
 	"Description": "",
 	"Modules": [
 		{
+			"Name": "RoboSim",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "RoboDrive",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

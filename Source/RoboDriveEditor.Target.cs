@@ -10,6 +10,6 @@ public class RoboDriveEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V7;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
-		ExtraModuleNames.Add("RoboDrive");
+		ExtraModuleNames.AddRange(new string[] { "RoboSim", "RoboDrive" });
 	}
 }
