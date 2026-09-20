@@ -11,3 +11,4 @@ discussed, so this list stays a description of the project rather than a plan.
 |---|---|---|
 | [0001](0001-three-module-split.md) | Split the C++ code into three modules | Accepted |
 | [0002](0002-rep103-internal-frames.md) | Use REP-103 frames internally | Accepted |
+| [0003](0003-velocity-command-interface.md) | Command the robot with (linear velocity, angular velocity) | Accepted |

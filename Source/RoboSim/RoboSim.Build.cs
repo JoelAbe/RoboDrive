@@ -10,6 +10,7 @@ public class RoboSim : ModuleRules
             new string[]
             {
                 "Core",
+                "CoreUObject",
             }
         );
 
