@@ -11,6 +11,7 @@ public class RoboSim : ModuleRules
             {
                 "Core",
                 "CoreUObject",
+                "Engine"
             }
         );
 
