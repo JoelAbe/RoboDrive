@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "RoboWheel.h"
 #include "GameFramework/Pawn.h"
 #include "RoboVehicle.generated.h"
 
@@ -25,10 +26,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot", meta = (ClampMin = "0.1", Units = "kg"))
 	double MassKg = 20.0;
 
+	/** Distance between the left and right wheel contact points, m. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	double GetWheelSeparationM() const;
+
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** The chassis rigid body. Everything else attaches to this. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TObjectPtr<UStaticMeshComponent> Chassis;
+
+	/** Front left, front right, rear left, rear right. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
+	TArray<TObjectPtr<URoboWheel>> Wheels;
 };

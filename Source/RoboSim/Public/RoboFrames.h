@@ -16,6 +16,12 @@ namespace RoboFrames
 {
 	constexpr double MetersPerUU = 0.01;
 	constexpr double UUPerMeter = 100.0;
+	
+	/**
+	 * Unreal's force unit is kg.cm/s^2, because its masses are kg and its
+	 * distances cm. A newton is kg.m/s^2, so it is 100 Unreal force units.
+	 */
+	constexpr double UUForcePerNewton = 100.0;
 
 	/** Positions: mirror Y, then scale cm -> m. */
 	inline FVector PositionToRos(const FVector& UePosition)
