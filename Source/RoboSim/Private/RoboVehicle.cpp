@@ -106,12 +106,21 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 		Debug.Linear = DebugLinearMS;
 		Debug.Angular = DebugAngularRadS;
 		Debug.TimeSeconds = NowSeconds;
-		Debug.Source = EDriveSource::Autonomy;
+		Debug.Source = EDriveSource::External;
 		Arbiter.Submit(Debug);
 	}
 
 	// Whoever wins arbitration drives. Nothing fresh means a stop.
 	const FDriveCommand Command = Arbiter.Evaluate(NowSeconds);
+
+	if (bDrawDebugState)
+	{
+		DrawDebugString(GetWorld(), FVector(0.0, 0.0, 40.0),
+			FString::Printf(TEXT("%s  v=%.2f m/s  w=%.2f rad/s"),
+				*UEnum::GetDisplayValueAsText(Command.Source).ToString(),
+				Command.Linear, Command.Angular),
+			this, FColor::White, 0.0f, true);
+	}
 
 	const RoboDiffDrive::FWheelSpeeds WheelSpeeds = RoboDiffDrive::ToWheelSpeeds(
 		RoboDiffDrive::FBodyVelocity{ Command.Linear, Command.Angular }, GetWheelSeparationM());

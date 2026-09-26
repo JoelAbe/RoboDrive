@@ -23,6 +23,28 @@ class ROBOSIM_API ARoboVehicle : public APawn
 public:
 	ARoboVehicle();
 
+	/** Submit a command. The arbiter decides which source actually drives. */
+	UFUNCTION(BlueprintCallable, Category = "Robot")
+	void SubmitDriveCommand(const FDriveCommand& Command);
+
+	/** Which source is currently driving. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	EDriveSource GetActiveDriveSource() const;
+
+	/** Temporary: drive from the Details panel before input exists. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bUseDebugCommand = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (Units = "m/s"))
+	double DebugLinearMS = 0.0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	double DebugAngularRadS = 0.0;
+
+	/** Draw the active source and command above the robot. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDrawDebugState = true;
+	
 	/** Total mass of the robot, kg. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot", meta = (ClampMin = "0.1", Units = "kg"))
 	double MassKg = 20.0;
@@ -60,24 +82,6 @@ protected:
 	/** Front left, front right, rear left, rear right. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TArray<TObjectPtr<URoboWheel>> Wheels;
-
-	/** Submit a command. The arbiter decides which source actually drives. */
-	UFUNCTION(BlueprintCallable, Category = "Robot")
-	void SubmitDriveCommand(const FDriveCommand& Command);
-
-	/** Which source is currently driving. */
-	UFUNCTION(BlueprintPure, Category = "Robot")
-	EDriveSource GetActiveDriveSource() const;
-
-	/** Temporary: drive from the Details panel before input exists. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bUseDebugCommand = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (Units = "m/s"))
-	double DebugLinearMS = 0.0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	double DebugAngularRadS = 0.0;
 
 private:
 	FDriveArbiter Arbiter;
