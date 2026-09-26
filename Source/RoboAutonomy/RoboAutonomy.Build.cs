@@ -10,6 +10,8 @@ public class RoboAutonomy : ModuleRules
             new string[]
             {
                 "Core",
+                "CoreUObject",
+                "Engine",
                 "RoboSim"
             }
         );

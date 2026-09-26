@@ -13,3 +13,4 @@ discussed, so this list stays a description of the project rather than a plan.
 | [0002](0002-rep103-internal-frames.md) | Use REP-103 frames internally | Accepted |
 | [0003](0003-velocity-command-interface.md) | Command the robot with (linear velocity, angular velocity) | Accepted |
 | [0004](0004-raycast-wheel-vehicle-model.md) | Model the vehicle with raycast wheels and casters | Accepted |
+| [0005](0005-arbitration-by-priority-and-freshness.md) | Arbitrate drive commands by priority and freshness | Accepted |
