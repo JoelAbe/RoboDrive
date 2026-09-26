@@ -4,6 +4,8 @@
 #include "RoboSim.h"
 #include "RoboWheel.h"
 #include "RoboFrames.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -54,6 +56,33 @@ ARoboVehicle::ARoboVehicle()
 		Wheel->bIsDriven = Setup.bDriven;
 		Wheels.Add(Wheel);
 	}
+	
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(Chassis);
+	CameraBoom->TargetArmLength = 350.0f;
+	CameraBoom->SocketOffset = FVector(0.0, 0.0, 60.0);
+	CameraBoom->SetRelativeRotation(FRotator(-25.0, 0.0, 0.0));
+
+	// Follow the robot's heading, but ignore chassis pitch and roll. The
+	// suspension leans constantly, and a view that leans with it is unwatchable
+	// and makes it impossible to judge whether the robot is level.
+	CameraBoom->bInheritYaw = true;
+	CameraBoom->bInheritPitch = false;
+	CameraBoom->bInheritRoll = false;
+	CameraBoom->bUsePawnControlRotation = false;
+
+	// Smooth out the physics jitter so the view is readable while driving.
+	CameraBoom->bEnableCameraLag = true;
+	CameraBoom->CameraLagSpeed = 10.0f;
+	CameraBoom->bEnableCameraRotationLag = true;
+	CameraBoom->CameraRotationLagSpeed = 8.0f;
+
+	// Let the camera pass through geometry rather than snapping in against it.
+	// A sim view should stay predictable, not behave like a game camera.
+	CameraBoom->bDoCollisionTest = false;
+
+	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 }
 
 void ARoboVehicle::OnConstruction(const FTransform& Transform)
