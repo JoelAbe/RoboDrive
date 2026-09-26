@@ -169,4 +169,6 @@ private:
 
 	/** Compression from the previous update, m, for the damping rate. */
 	double PreviousCompressionM = 0.0;
+
+	bool bHadContact = false;
 };

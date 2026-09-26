@@ -7,34 +7,36 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/BoxComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 ARoboVehicle::ARoboVehicle()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	
-	Chassis = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Chassis"));
+	// The rigid body is a box primitive at real size, NOT a scaled mesh.
+	// Anything attached to a scaled component has its offsets scaled too, which
+	// silently shrinks the wheel layout and disagrees with the kinematics.
+	Chassis = CreateDefaultSubobject<UBoxComponent>(TEXT("Chassis"));
 	SetRootComponent(Chassis);
+	Chassis->SetBoxExtent(FVector(30.0, 20.0, 10.0));   // 60 x 40 x 20 cm
+	Chassis->SetCollisionProfileName(TEXT("PhysicsActor"));
+	Chassis->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Chassis->SetSimulatePhysics(true);
 
-	// Engine primitive: a 100 cm cube, scaled to a 60 x 40 x 20 cm body.
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh (TEXT("/Engine/BasicShapes/Cube.Cube"));
+	// Visual shell, no collision of its own.
+	ChassisMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ChassisMesh"));
+	ChassisMesh->SetupAttachment(Chassis);
+	ChassisMesh->SetRelativeScale3D(FVector(0.6, 0.4, 0.2));
+	ChassisMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(
+		TEXT("/Engine/BasicShapes/Cube.Cube"));
 	if (CubeMesh.Succeeded())
 	{
-		Chassis->SetStaticMesh(CubeMesh.Object);
+		ChassisMesh->SetStaticMesh(CubeMesh.Object);
 	}
-
-	Chassis->SetRelativeScale3D(FVector(0.6, 0.4, 0.2));
-	Chassis->SetSimulatePhysics(true);
-	Chassis->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	Chassis->SetCollisionProfileName(TEXT("PhysicsActor"));
 	
-	// Differential drive: two driven wheels on a central axle, plus a caster
-	// at each end for balance. Casters roll freely, so they do not resist the
-	// turn the way four driven corner wheels would.
-	const double HalfTrackUU = 20.0;
-	const double CasterOffsetUU = 22.0;
-	const double MountHeightUU = -10.0;
-
 	struct FWheelSetup
 	{
 		const TCHAR* Name;
@@ -120,6 +122,11 @@ void ARoboVehicle::BeginPlay()
 	// block of whatever the cube's default density is.
 	Chassis->SetMassOverrideInKg(NAME_None, static_cast<float>(MassKg), true);
 
+	// Robots carry their battery and motors low, so the centre of mass sits
+	// below the geometric centre. Unreal would otherwise place it mid-box,
+	// which leans the chassis enough in turns to unload the inside wheel.
+	Chassis->SetCenterOfMass(CenterOfMassOffsetM * RoboFrames::UUPerMeter);
+
 	UE_LOG(LogRoboSim, Log, TEXT("%s ready: %.1f kg"), *GetName(), MassKg);
 }
 
@@ -144,11 +151,19 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 
 	if (bDrawDebugState)
 	{
+		int32 GroundedCount = 0;
+		for (const URoboWheel* Wheel : Wheels)
+		{
+			GroundedCount += Wheel->GetContact().bGrounded ? 1 : 0;
+		}
+
 		DrawDebugString(GetWorld(), FVector(0.0, 0.0, 40.0),
-			FString::Printf(TEXT("%s  v=%.2f m/s  w=%.2f rad/s"),
+			FString::Printf(TEXT("%s  v=%.2f  w=%.2f  grounded %d/%d"),
 				*UEnum::GetDisplayValueAsText(Command.Source).ToString(),
-				Command.Linear, Command.Angular),
+				Command.Linear, Command.Angular, GroundedCount, Wheels.Num()),
 			this, FColor::White, 0.0f, true);
+
+		DrawDebugSphere(GetWorld(), Chassis->GetCenterOfMass(), 4.0f, 8, FColor::Orange, false, 0.0f, 0, 1.0f);
 	}
 
 	const RoboDiffDrive::FWheelSpeeds WheelSpeeds = RoboDiffDrive::ToWheelSpeeds(
@@ -162,7 +177,7 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 		Wheel->UpdateSuspension(Chassis, DeltaSeconds);
 
 		// Wheels[0] is the left driven wheel, Wheels[1] the right; the rest are casters.
-		const double TargetSpeedMS = (Index == 0) ? WheelSpeeds.Left : WheelSpeeds.Right;
+		const double TargetSpeedMS = Wheel->bIsDriven ? ((Index == 0) ? WheelSpeeds.Left : WheelSpeeds.Right): 0.0;
 		Wheel->UpdateDrive(Chassis, TargetSpeedMS, LoadPerWheelKg, DeltaSeconds);
 	}
 }
@@ -184,9 +199,8 @@ double ARoboVehicle::GetWheelSeparationM() const
 		return 0.0;
 	}
 
-	// Measured from the wheels themselves rather than stored separately, so
-	// moving a wheel in the editor cannot disagree with the kinematics.
-	const double LeftY = Wheels[0]->GetRelativeLocation().Y;
-	const double RightY = Wheels[1]->GetRelativeLocation().Y;
-	return FMath::Abs(RightY - LeftY) * RoboFrames::MetersPerUU;
+	// World distance, so a scaled parent or a nudged component can never make
+	// the kinematics disagree with the physical robot.
+	const double SeparationUU = FVector::Dist(Wheels[0]->GetComponentLocation(), Wheels[1]->GetComponentLocation());
+	return SeparationUU * RoboFrames::MetersPerUU;
 }

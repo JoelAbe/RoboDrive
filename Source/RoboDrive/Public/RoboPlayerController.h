@@ -44,16 +44,27 @@ protected:
 
 	/** Yaw rate at full input, rad/s. */
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (ClampMin = "0.0"))
-	double MaxYawRateRadS = 2.0;
+	double MaxYawRateRadS = 0.5;
 
 	/** Below this, the driver is considered to have let go. */
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (ClampMin = "0.0", ClampMax = "0.9"))
 	double InputDeadzone = 0.05;
 
+	/** Fastest the command may change, m/s per second. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (ClampMin = "0.1"))
+	double MaxLinearAccelMS2 = 2.0;
+
+	/** Fastest the yaw rate may change, rad/s per second. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (ClampMin = "0.1"))
+	double MaxYawAccelRadS2 = 3.0;
+
 private:
 	void OnDrive(const FInputActionValue& Value);
 	void OnTurn(const FInputActionValue& Value);
 
+	double CurrentLinearMS = 0.0;
+	double CurrentAngularRadS = 0.0;
+	
 	/** Input for this frame, cleared after each submission. */
 	double DriveInput = 0.0;
 	double TurnInput = 0.0;

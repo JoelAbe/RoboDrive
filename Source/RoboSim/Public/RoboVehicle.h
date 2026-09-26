@@ -8,12 +8,6 @@
 
 /**
  * A differential drive ground robot.
- *
- * The chassis is a single Chaos rigid body. Wheels are added in the next step
- * as raycast wheels: a trace per wheel provides suspension, and drive forces
- * are applied at the contact patch. Keeping the wheels behind a small
- * interface leaves room to replace them with constrained rigid bodies later,
- * which is what a skid-steer comparison would need.
  */
 UCLASS()
 class ROBOSIM_API ARoboVehicle : public APawn
@@ -48,6 +42,10 @@ public:
 	/** Total mass of the robot, kg. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot", meta = (ClampMin = "0.1", Units = "kg"))
 	double MassKg = 20.0;
+	
+	/** Centre of mass offset from the chassis centre, m. Negative Z lowers it. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot", meta = (Units = "m"))
+	FVector CenterOfMassOffsetM = FVector(0.0, 0.0, -0.05);
 
 	/** Distance between the left and right wheel contact points, m. */
 	UFUNCTION(BlueprintPure, Category = "Robot")
@@ -75,9 +73,13 @@ protected:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	/** The chassis rigid body. Everything else attaches to this. */
+	/** Chassis rigid body. Unscaled, so attached components keep real offsets. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
-	TObjectPtr<UStaticMeshComponent> Chassis;
+	TObjectPtr<class UBoxComponent> Chassis;
+
+	/** Visual only. Scaled freely without disturbing the physics or the wheels. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
+	TObjectPtr<UStaticMeshComponent> ChassisMesh;
 
 	/** Front left, front right, rear left, rear right. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")

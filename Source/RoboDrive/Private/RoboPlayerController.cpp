@@ -67,19 +67,34 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 	{
 		return;
 	}
-
+	
 	// Only submit while the driver is actually holding something. Otherwise
 	// manual input would win arbitration forever and nothing else could drive.
 	const double Amount = FMath::Max(FMath::Abs(DriveInput), FMath::Abs(TurnInput));
 	if (Amount > InputDeadzone)
 	{
+		const double TargetLinearMS = DriveInput * MaxLinearSpeedMS;
+		const double TargetAngularRadS = TurnInput * MaxYawRateRadS;
+
+		// Ramp toward the request rather than jumping to it: a step command spends
+		// grip on an acceleration the wheels cannot deliver anyway.
+		CurrentLinearMS = FMath::FInterpConstantTo(CurrentLinearMS, TargetLinearMS, DeltaTime, MaxLinearAccelMS2);
+		CurrentAngularRadS = FMath::FInterpConstantTo(CurrentAngularRadS, TargetAngularRadS, DeltaTime, MaxYawAccelRadS2);
+		
 		FDriveCommand Command;
-		Command.Linear = DriveInput * MaxLinearSpeedMS;
-		Command.Angular = TurnInput * MaxYawRateRadS;
+		Command.Linear = CurrentLinearMS;
+		Command.Angular = CurrentAngularRadS;
 		Command.TimeSeconds = GetWorld()->GetTimeSeconds();
 		Command.Source = EDriveSource::Manual;
 
 		Vehicle->SubmitDriveCommand(Command);
+	}
+	else
+	{
+		// Not driving, so there is no ramp to continue. Keeping the old value
+		// would make the next key press resume the previous command first.
+		CurrentLinearMS = 0.0;
+		CurrentAngularRadS = 0.0;
 	}
 
 	// Triggered events fire every frame a key is held, so clearing here means

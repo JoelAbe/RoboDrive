@@ -17,6 +17,7 @@ void URoboWheel::UpdateSuspension(UPrimitiveComponent* Body, float DeltaSeconds)
 	if (Body == nullptr || DeltaSeconds <= 0.0f)
 	{
 		PreviousCompressionM = 0.0;
+		bHadContact = false;
 		return;
 	}
 
@@ -42,6 +43,7 @@ void URoboWheel::UpdateSuspension(UPrimitiveComponent* Body, float DeltaSeconds)
 	{
 		// Airborne: the suspension hangs fully extended and applies nothing.
 		PreviousCompressionM = 0.0;
+		bHadContact = false;
 
 		if (bDrawDebug)
 		{
@@ -54,11 +56,14 @@ void URoboWheel::UpdateSuspension(UPrimitiveComponent* Body, float DeltaSeconds)
 	const double HitDistanceM = Hit.Distance * RoboFrames::MetersPerUU;
 	const double CompressionM = FMath::Clamp(MaxLengthM - HitDistanceM, 0.0, RestLengthM);
 
-	// Rate of compression, from the change since the last update. Positive
-	// while compressing, negative while the suspension extends again.
-	const double CompressionRateMS = (CompressionM - PreviousCompressionM) / DeltaSeconds;
-	PreviousCompressionM = CompressionM;
+	// Rate of compression, from the change since the last update. On the first
+	// frame of contact there is no previous sample, so treat the rate as zero
+	// rather than inventing a large one from a single step.
+	const double CompressionRateMS = bHadContact ? (CompressionM - PreviousCompressionM) / DeltaSeconds : 0.0;
 
+	PreviousCompressionM = CompressionM;
+	bHadContact = true;
+	
 	const double ForceN = RoboSuspension::ComputeForceN(
 		CompressionM, CompressionRateMS, StiffnessNPerM, DampingNsPerM);
 
