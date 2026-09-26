@@ -24,6 +24,61 @@ namespace RoboSuspension
 	}
 }
 
+/** Contact patch force maths, kept engine-free so it can be tested directly. */
+namespace RoboTraction
+{
+	/** Longitudinal (X) and lateral (Y) force at a contact patch, in newtons. */
+	struct FContactForceN
+	{
+		double Longitudinal = 0.0;
+		double Lateral = 0.0;
+	};
+
+	/**
+	 * Force a wheel can apply this step, limited by grip.
+	 *
+	 * The wheel is asked to correct its longitudinal speed error and to cancel
+	 * any sideways motion. Both demands share one friction budget: if their
+	 * combined magnitude exceeds it, they are scaled down together, which is
+	 * what a skidding wheel does.
+	 *
+	 * @param SpeedErrorMS   Commanded minus actual longitudinal speed, m/s.
+	 * @param LateralSpeedMS Sideways speed at the contact patch, m/s.
+	 * @param LoadMassKg     Share of the robot's mass carried by this wheel, kg.
+	 * @param DeltaSeconds   Step length, s.
+	 * @param NormalForceN   Suspension force pressing the wheel down, N.
+	 * @param GripCoefficient Friction coefficient (about 1.0 for rubber on concrete).
+	 */
+	inline FContactForceN ComputeForceN(double SpeedErrorMS, double LateralSpeedMS,
+		double LoadMassKg, double DeltaSeconds, double NormalForceN, double GripCoefficient)
+	{
+		if (DeltaSeconds <= 0.0)
+		{
+			return FContactForceN{};
+		}
+
+		// The force that would exactly cancel each velocity error this step.
+		FContactForceN Demand;
+		Demand.Longitudinal = LoadMassKg * SpeedErrorMS / DeltaSeconds;
+		Demand.Lateral = LoadMassKg * -LateralSpeedMS / DeltaSeconds;
+
+		const double MaxForceN = FMath::Max(NormalForceN, 0.0) * GripCoefficient;
+		const double DemandN = FMath::Sqrt(
+			Demand.Longitudinal * Demand.Longitudinal + Demand.Lateral * Demand.Lateral);
+
+		if (DemandN > MaxForceN && DemandN > UE_DOUBLE_SMALL_NUMBER)
+		{
+			// Beyond the friction circle: the wheel slips. Scale both
+			// components so the direction is kept but the magnitude is capped.
+			const double Scale = MaxForceN / DemandN;
+			Demand.Longitudinal *= Scale;
+			Demand.Lateral *= Scale;
+		}
+
+		return Demand;
+	}
+}
+
 /** What a wheel found beneath it on the last update. */
 USTRUCT(BlueprintType)
 struct FWheelContact
@@ -92,6 +147,22 @@ public:
 	/** Draw the trace and contact point during play. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDrawDebug = true;
+
+	
+	/** Apply drive and lateral friction at the contact patch found by UpdateSuspension. */
+	void UpdateDrive(UPrimitiveComponent* Body, double TargetSpeedMS, double LoadMassKg, float DeltaSeconds);
+
+	/** Driven wheels push and resist sideways slide. Casters only carry weight. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wheel")
+	bool bIsDriven = true;
+
+	/** Friction coefficient at the contact patch. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wheel", meta = (ClampMin = "0.0"))
+	double GripCoefficient = 1.0;
+
+	/** Measured longitudinal speed at the contact patch, m/s. Phase 2 encoders read this. */
+	UPROPERTY(BlueprintReadOnly, Category = "Wheel")
+	double MeasuredSpeedMS = 0.0;
 
 private:
 	FWheelContact Contact;

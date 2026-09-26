@@ -79,3 +79,50 @@ void URoboWheel::UpdateSuspension(UPrimitiveComponent* Body, float DeltaSeconds)
 		DrawDebugSphere(World, Hit.ImpactPoint, 3.0f, 8, FColor::Yellow, false, -1.0f, 0, 1.0f);
 	}
 }
+
+void URoboWheel::UpdateDrive(UPrimitiveComponent* Body, double TargetSpeedMS, double LoadMassKg, float DeltaSeconds)
+{
+	MeasuredSpeedMS = 0.0;
+
+	if (!bIsDriven || !Contact.bGrounded || Body == nullptr || DeltaSeconds <= 0.0f)
+	{
+		return;
+	}
+
+	// How the ground is moving under this wheel, in m/s.
+	const FVector ContactVelocityUU = Body->GetPhysicsLinearVelocityAtPoint(Contact.Location);
+	const FVector ContactVelocityMS = ContactVelocityUU * RoboFrames::MetersPerUU;
+
+	// Wheel axes flattened onto the contact surface, so slopes are handled.
+	const FVector Forward = FVector::VectorPlaneProject(GetForwardVector(), Contact.Normal).GetSafeNormal();
+	const FVector Right = FVector::VectorPlaneProject(GetRightVector(), Contact.Normal).GetSafeNormal();
+
+	MeasuredSpeedMS = FVector::DotProduct(ContactVelocityMS, Forward);
+	const double LateralSpeedMS = FVector::DotProduct(ContactVelocityMS, Right);
+
+	const RoboTraction::FContactForceN Force = RoboTraction::ComputeForceN(
+		TargetSpeedMS - MeasuredSpeedMS, LateralSpeedMS, LoadMassKg, DeltaSeconds, Contact.SuspensionForceN, GripCoefficient);
+
+	const FVector ForceUU =
+		(Forward * Force.Longitudinal + Right * Force.Lateral) * RoboFrames::UUForcePerNewton;
+
+	Body->AddForceAtLocation(ForceUU, Contact.Location);
+
+	if (bDrawDebug)
+	{
+		// Scale by fraction of the friction budget used, so a cruising wheel
+		// draws almost nothing and a slipping wheel draws a full-length line.
+		const double MaxForceN = FMath::Max(Contact.SuspensionForceN, 0.0) * GripCoefficient;
+		if (MaxForceN > UE_DOUBLE_SMALL_NUMBER)
+		{
+			constexpr double FullScaleUU = 40.0;
+			const FVector DriveUU = Forward * (Force.Longitudinal / MaxForceN * FullScaleUU);
+			const FVector GripUU = Right * (Force.Lateral / MaxForceN * FullScaleUU);
+
+			DrawDebugLine(GetWorld(), Contact.Location, Contact.Location + DriveUU,
+				FColor::Cyan, false, -1.0f, 0, 2.0f);
+			DrawDebugLine(GetWorld(), Contact.Location, Contact.Location + GripUU,
+				FColor::Magenta, false, -1.0f, 0, 2.0f);
+		}
+	}
+}

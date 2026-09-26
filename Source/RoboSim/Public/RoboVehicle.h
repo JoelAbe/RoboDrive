@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "RoboDriveArbiter.h"
 #include "RoboWheel.h"
 #include "GameFramework/Pawn.h"
 #include "RoboVehicle.generated.h"
@@ -30,7 +31,24 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Robot")
 	double GetWheelSeparationM() const;
 
+	/** Distance between the two driven wheels, m. Also the kinematic wheel separation. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot|Layout", meta = (ClampMin = "0.05", Units = "m"))
+	double WheelTrackM = 0.6;
+
+	/** Distance from the centre to each caster, m. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot|Layout", meta = (ClampMin = "0.05", Units = "m"))
+	double CasterOffsetM = 0.32;
+
+	/** Height of the wheel mounts relative to the chassis origin, m. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot|Layout", meta = (Units = "m"))
+	double WheelMountHeightM = -0.1;
+
 protected:
+	virtual void OnConstruction(const FTransform& Transform) override;
+
+	/** Position the wheel components from the layout properties. */
+	void ApplyWheelLayout();
+	
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaSeconds) override;
@@ -42,4 +60,25 @@ protected:
 	/** Front left, front right, rear left, rear right. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TArray<TObjectPtr<URoboWheel>> Wheels;
+
+	/** Submit a command. The arbiter decides which source actually drives. */
+	UFUNCTION(BlueprintCallable, Category = "Robot")
+	void SubmitDriveCommand(const FDriveCommand& Command);
+
+	/** Which source is currently driving. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	EDriveSource GetActiveDriveSource() const;
+
+	/** Temporary: drive from the Details panel before input exists. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bUseDebugCommand = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (Units = "m/s"))
+	double DebugLinearMS = 0.0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	double DebugAngularRadS = 0.0;
+
+private:
+	FDriveArbiter Arbiter;
 };

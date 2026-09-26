@@ -1,5 +1,6 @@
 ﻿#include "RoboVehicle.h"
 
+#include "RoboDiffDrive.h"
 #include "RoboSim.h"
 #include "RoboWheel.h"
 #include "RoboFrames.h"
@@ -25,27 +26,61 @@ ARoboVehicle::ARoboVehicle()
 	Chassis->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	Chassis->SetCollisionProfileName(TEXT("PhysicsActor"));
 	
-	// 40 cm between left and right wheels, 40 cm between front and rear,
-	// mounted at the bottom face of the 20 cm tall chassis.
+	// Differential drive: two driven wheels on a central axle, plus a caster
+	// at each end for balance. Casters roll freely, so they do not resist the
+	// turn the way four driven corner wheels would.
 	const double HalfTrackUU = 20.0;
-	const double HalfBaseUU = 20.0;
+	const double CasterOffsetUU = 22.0;
 	const double MountHeightUU = -10.0;
 
-	const TCHAR* WheelNames[] = { TEXT("WheelFL"), TEXT("WheelFR"), TEXT("WheelRL"), TEXT("WheelRR") };
-	const FVector WheelOffsets[] = {
-		FVector( HalfBaseUU, -HalfTrackUU, MountHeightUU),   // front left  (-Y is left in Unreal)
-		FVector( HalfBaseUU,  HalfTrackUU, MountHeightUU),   // front right
-		FVector(-HalfBaseUU, -HalfTrackUU, MountHeightUU),   // rear left
-		FVector(-HalfBaseUU,  HalfTrackUU, MountHeightUU)    // rear right
+	struct FWheelSetup
+	{
+		const TCHAR* Name;
+		bool bDriven;
 	};
 
-	for (int32 Index = 0; Index < UE_ARRAY_COUNT(WheelNames); ++Index)
+	// Order matters: Wheels[0] is the left driven wheel and Wheels[1] the right.
+	const FWheelSetup Setups[] = {
+		{ TEXT("WheelLeft"),   true  },
+		{ TEXT("WheelRight"),  true  },
+		{ TEXT("CasterFront"), false },
+		{ TEXT("CasterRear"),  false }
+	};
+
+	for (const FWheelSetup& Setup : Setups)
 	{
-		URoboWheel* Wheel = CreateDefaultSubobject<URoboWheel>(WheelNames[Index]);
+		URoboWheel* Wheel = CreateDefaultSubobject<URoboWheel>(Setup.Name);
 		Wheel->SetupAttachment(Chassis);
-		Wheel->SetRelativeLocation(WheelOffsets[Index]);
+		Wheel->bIsDriven = Setup.bDriven;
 		Wheels.Add(Wheel);
 	}
+}
+
+void ARoboVehicle::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	// Re-runs whenever a property changes in the editor, so moving the wheels
+	// is a number change rather than a recompile.
+	ApplyWheelLayout();
+}
+
+void ARoboVehicle::ApplyWheelLayout()
+{
+	if (Wheels.Num() < 4)
+	{
+		return;
+	}
+
+	const double HalfTrackUU = 0.5 * WheelTrackM * RoboFrames::UUPerMeter;
+	const double CasterUU = CasterOffsetM * RoboFrames::UUPerMeter;
+	const double HeightUU = WheelMountHeightM * RoboFrames::UUPerMeter;
+
+	// Unreal's +Y is to the right, so the left wheel takes the negative offset.
+	Wheels[0]->SetRelativeLocation(FVector(0.0, -HalfTrackUU, HeightUU));
+	Wheels[1]->SetRelativeLocation(FVector(0.0,  HalfTrackUU, HeightUU));
+	Wheels[2]->SetRelativeLocation(FVector( CasterUU, 0.0, HeightUU));
+	Wheels[3]->SetRelativeLocation(FVector(-CasterUU, 0.0, HeightUU));
 }
 
 void ARoboVehicle::BeginPlay()
@@ -63,10 +98,45 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	for (URoboWheel* Wheel : Wheels)
+	const double NowSeconds = GetWorld()->GetTimeSeconds();
+
+	if (bUseDebugCommand)
 	{
-		Wheel->UpdateSuspension(Chassis, DeltaSeconds);
+		FDriveCommand Debug;
+		Debug.Linear = DebugLinearMS;
+		Debug.Angular = DebugAngularRadS;
+		Debug.TimeSeconds = NowSeconds;
+		Debug.Source = EDriveSource::Autonomy;
+		Arbiter.Submit(Debug);
 	}
+
+	// Whoever wins arbitration drives. Nothing fresh means a stop.
+	const FDriveCommand Command = Arbiter.Evaluate(NowSeconds);
+
+	const RoboDiffDrive::FWheelSpeeds WheelSpeeds = RoboDiffDrive::ToWheelSpeeds(
+		RoboDiffDrive::FBodyVelocity{ Command.Linear, Command.Angular }, GetWheelSeparationM());
+
+	const double LoadPerWheelKg = MassKg / FMath::Max(Wheels.Num(), 1);
+
+	for (int32 Index = 0; Index < Wheels.Num(); ++Index)
+	{
+		URoboWheel* Wheel = Wheels[Index];
+		Wheel->UpdateSuspension(Chassis, DeltaSeconds);
+
+		// Wheels[0] is the left driven wheel, Wheels[1] the right; the rest are casters.
+		const double TargetSpeedMS = (Index == 0) ? WheelSpeeds.Left : WheelSpeeds.Right;
+		Wheel->UpdateDrive(Chassis, TargetSpeedMS, LoadPerWheelKg, DeltaSeconds);
+	}
+}
+
+void ARoboVehicle::SubmitDriveCommand(const FDriveCommand& Command)
+{
+	Arbiter.Submit(Command);
+}
+
+EDriveSource ARoboVehicle::GetActiveDriveSource() const
+{
+	return Arbiter.GetActiveSource();
 }
 
 double ARoboVehicle::GetWheelSeparationM() const
