@@ -59,4 +59,19 @@ namespace RoboFrames
 	{
 		return -FMath::RadiansToDegrees(RosYawRadians);
 	}
+
+	/**
+	 * Wrap an angle to (-pi, pi), in full double precision.
+	 *
+	 * FMath::UnwindRadians is templated on the type but subtracts the float
+	 * constant UE_TWO_PI, which injects roughly 3e-8 rad per wrap. That is
+	 * invisible in gameplay and ruinous in odometry, where a heading error is
+	 * multiplied by distance travelled and never corrects itself.
+	 */
+	inline double WrapRadians(double Radians)
+	{
+		const double Shifted = FMath::Fmod(Radians + UE_DOUBLE_PI, UE_DOUBLE_TWO_PI);
+		const double Positive = Shifted <= 0.0 ? Shifted + UE_DOUBLE_TWO_PI : Shifted;
+		return Positive - UE_DOUBLE_PI;
+	}
 }
