@@ -4,6 +4,7 @@
 #include "RoboSim.h"
 #include "RoboWheel.h"
 #include "RoboFrames.h"
+#include "RoboSimSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -134,7 +135,12 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	const double NowSeconds = GetWorld()->GetTimeSeconds();
+	const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this);
+	if (Sim == nullptr)
+	{
+		return;
+	}
+	const double NowSeconds = Sim->GetSimTimeSeconds();
 
 	if (bUseDebugCommand)
 	{
@@ -151,16 +157,11 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 
 	if (bDrawDebugState)
 	{
-		int32 GroundedCount = 0;
-		for (const URoboWheel* Wheel : Wheels)
-		{
-			GroundedCount += Wheel->GetContact().bGrounded ? 1 : 0;
-		}
-
 		DrawDebugString(GetWorld(), FVector(0.0, 0.0, 40.0),
-			FString::Printf(TEXT("%s  v=%.2f  w=%.2f  grounded %d/%d"),
+			FString::Printf(TEXT("%s  v=%.2f  w=%.2f\nt=%.2fs  step %lld  RTF %.2f"),
 				*UEnum::GetDisplayValueAsText(Command.Source).ToString(),
-				Command.Linear, Command.Angular, GroundedCount, Wheels.Num()),
+				Command.Linear, Command.Angular,
+				Sim->GetSimTimeSeconds(), Sim->GetStepCount(), Sim->GetRealTimeFactor()),
 			this, FColor::White, 0.0f, true);
 
 		DrawDebugSphere(GetWorld(), Chassis->GetCenterOfMass(), 4.0f, 8, FColor::Orange, false, 0.0f, 0, 1.0f);

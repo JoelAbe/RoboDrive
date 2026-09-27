@@ -6,6 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
+#include "RoboSimSubsystem.h"
 
 void ARoboPlayerController::BeginPlay()
 {
@@ -63,7 +64,8 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 	Super::PlayerTick(DeltaTime);
 
 	ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn());
-	if (Vehicle == nullptr)
+	const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this);
+	if (Vehicle == nullptr || Sim == nullptr)
 	{
 		return;
 	}
@@ -84,7 +86,7 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 		FDriveCommand Command;
 		Command.Linear = CurrentLinearMS;
 		Command.Angular = CurrentAngularRadS;
-		Command.TimeSeconds = GetWorld()->GetTimeSeconds();
+		Command.TimeSeconds = Sim->GetSimTimeSeconds();
 		Command.Source = EDriveSource::Manual;
 
 		Vehicle->SubmitDriveCommand(Command);

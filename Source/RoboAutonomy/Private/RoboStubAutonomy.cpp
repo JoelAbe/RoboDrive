@@ -2,6 +2,7 @@
 
 #include "RoboAutonomy.h"
 #include "RoboPatterns.h"
+#include "RoboSimSubsystem.h"
 #include "RoboVehicle.h"
 
 URoboStubAutonomy::URoboStubAutonomy()
@@ -42,7 +43,12 @@ void URoboStubAutonomy::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	FDriveCommand Command;
 	Command.Linear = Body.Linear;
 	Command.Angular = Body.Angular;
-	Command.TimeSeconds = GetWorld()->GetTimeSeconds();
+	const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this);
+	if (Sim == nullptr)
+	{
+		return;
+	}
+	Command.TimeSeconds = Sim->GetSimTimeSeconds();
 	Command.Source = EDriveSource::Autonomy;
 
 	Vehicle->SubmitDriveCommand(Command);
