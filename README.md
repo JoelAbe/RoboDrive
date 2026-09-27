@@ -4,9 +4,10 @@ A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, and a test harness that runs without the editor.
 
-> **Status:** Phase 0 complete. The module structure, coordinate frame
-> conversions and headless test runner exist. Nothing drives yet — that is
-> Phase 1. See the [roadmap](docs/roadmap.md).
+> **Status:** Phase 1 complete. The robot drives from velocity commands
+> through real differential drive kinematics on Chaos physics, with keyboard
+> and in-engine sources arbitrated by priority and a watchdog. Sensors are
+> Phase 2. See the [roadmap](docs/roadmap.md).
 
 ## Requirements
 
