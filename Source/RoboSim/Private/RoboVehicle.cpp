@@ -4,6 +4,7 @@
 #include "RoboSim.h"
 #include "RoboWheel.h"
 #include "RoboFrames.h"
+#include "RoboOdometryComponent.h"
 #include "RoboSimSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -86,6 +87,8 @@ ARoboVehicle::ARoboVehicle()
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+
+	Odometry = CreateDefaultSubobject<URoboOdometryComponent>(TEXT("Odometry"));
 }
 
 void ARoboVehicle::OnConstruction(const FTransform& Transform)
@@ -167,8 +170,8 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 		DrawDebugSphere(GetWorld(), Chassis->GetCenterOfMass(), 4.0f, 8, FColor::Orange, false, 0.0f, 0, 1.0f);
 	}
 
-	const RoboDiffDrive::FWheelSpeeds WheelSpeeds = RoboDiffDrive::ToWheelSpeeds(
-		RoboDiffDrive::FBodyVelocity{ Command.Linear, Command.Angular }, GetWheelSeparationM());
+	LastWheelSpeeds = RoboDiffDrive::ToWheelSpeeds(
+	RoboDiffDrive::FBodyVelocity{ Command.Linear, Command.Angular }, GetWheelSeparationM());
 
 	const double LoadPerWheelKg = MassKg / FMath::Max(Wheels.Num(), 1);
 
@@ -178,7 +181,7 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 		Wheel->UpdateSuspension(Chassis, DeltaSeconds);
 
 		// Wheels[0] is the left driven wheel, Wheels[1] the right; the rest are casters.
-		const double TargetSpeedMS = Wheel->bIsDriven ? ((Index == 0) ? WheelSpeeds.Left : WheelSpeeds.Right): 0.0;
+		const double TargetSpeedMS = Wheel->bIsDriven ? ((Index == 0) ? LastWheelSpeeds.Left : LastWheelSpeeds.Right): 0.0;
 		Wheel->UpdateDrive(Chassis, TargetSpeedMS, LoadPerWheelKg, DeltaSeconds);
 	}
 }
@@ -204,4 +207,9 @@ double ARoboVehicle::GetWheelSeparationM() const
 	// the kinematics disagree with the physical robot.
 	const double SeparationUU = FVector::Dist(Wheels[0]->GetComponentLocation(), Wheels[1]->GetComponentLocation());
 	return SeparationUU * RoboFrames::MetersPerUU;
+}
+
+double ARoboVehicle::GetWheelRadiusM() const
+{
+	return Wheels.Num() > 0 ? Wheels[0]->WheelRadiusM : 0.0;
 }

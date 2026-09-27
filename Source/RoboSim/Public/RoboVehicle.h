@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "RoboDiffDrive.h"
 #include "RoboDriveArbiter.h"
 #include "RoboWheel.h"
 #include "GameFramework/Pawn.h"
@@ -63,6 +64,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot|Layout", meta = (Units = "m"))
 	double WheelMountHeightM = -0.1;
 
+	/** The wheel speeds most recently commanded. What the encoders observe. */
+	RoboDiffDrive::FWheelSpeeds GetCommandedWheelSpeeds() const { return LastWheelSpeeds; }
+
+	/** True wheel radius, m. Odometry may be told a different value on purpose. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	double GetWheelRadiusM() const;
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
@@ -85,6 +93,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TArray<TObjectPtr<URoboWheel>> Wheels;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
+	TObjectPtr<class URoboOdometryComponent> Odometry;
+	
 	/** Third-person view. Superseded by the operator view in Phase 5. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "View")
 	TObjectPtr<class USpringArmComponent> CameraBoom;
@@ -94,4 +105,5 @@ protected:
 
 private:
 	FDriveArbiter Arbiter;
+	RoboDiffDrive::FWheelSpeeds LastWheelSpeeds;
 };
