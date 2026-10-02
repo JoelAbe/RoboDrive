@@ -61,6 +61,50 @@ namespace RoboFrames
 	}
 
 	/**
+	 * Angular velocity. Unreal reports degrees per second; REP-103 wants
+	 * radians per second.
+	 *
+	 * The handedness flip mirrors Y, and a mirror reverses the sense of
+	 * rotation as well as the axis. For rotation about X or Z the axis
+	 * survives the mirror but the spin reverses, so those components flip.
+	 * For rotation about Y both reverse, and the two cancel. That is the
+	 * opposite pattern to positions, where only Y flips.
+	 */
+	inline FVector AngularVelocityToRos(const FVector& UeAngularVelocityDegS)
+	{
+		return FVector(
+			-FMath::DegreesToRadians(UeAngularVelocityDegS.X),
+			 FMath::DegreesToRadians(UeAngularVelocityDegS.Y),
+			-FMath::DegreesToRadians(UeAngularVelocityDegS.Z));
+	}
+
+	inline FVector AngularVelocityToUe(const FVector& RosAngularVelocityRadS)
+	{
+		return FVector(
+			-FMath::RadiansToDegrees(RosAngularVelocityRadS.X),
+			 FMath::RadiansToDegrees(RosAngularVelocityRadS.Y),
+			-FMath::RadiansToDegrees(RosAngularVelocityRadS.Z));
+	}
+
+	/**
+	 * Orientation. The quaternion's vector part is the rotation axis scaled by
+	 * sin(angle/2), so it follows the angular rule above. The scalar part is
+	 * cos(angle/2), a plain number with no direction, so it is unchanged.
+	 *
+	 * A mirror is its own inverse, which is why the two directions are the
+	 * same operation.
+	 */
+	inline FQuat RotationToRos(const FQuat& UeRotation)
+	{
+		return FQuat(-UeRotation.X, UeRotation.Y, -UeRotation.Z, UeRotation.W);
+	}
+
+	inline FQuat RotationToUe(const FQuat& RosRotation)
+	{
+		return FQuat(-RosRotation.X, RosRotation.Y, -RosRotation.Z, RosRotation.W);
+	}
+	
+	/**
 	 * Wrap an angle to (-pi, pi), in full double precision.
 	 *
 	 * FMath::UnwindRadians is templated on the type but subtracts the float

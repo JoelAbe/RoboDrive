@@ -77,6 +77,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDrawReadout = true;
 
+	/** Wait for the robot to settle before starting, so the drop is not counted as drift. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Odometry")
+	bool bStartWhenSettled = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Odometry",
+		meta = (ClampMin = "0.0", Units = "m/s"))
+	double SettledSpeedThresholdMS = 0.02;
+	
+	/** Distance the encoders believe has been travelled, m. */
+	UFUNCTION(BlueprintPure, Category = "Odometry")
+	double GetTravelledM() const { return TravelledM; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
@@ -100,9 +112,11 @@ private:
 	FRandomStream NoiseStream;
 
 	double NextSampleTimeSeconds = 0.0;
+	double TravelledM = 0.0;
 
 	/** Last drawn trail points, in Unreal space. */
 	FVector LastTruthPointUU = FVector::ZeroVector;
 	FVector LastEstimatePointUU = FVector::ZeroVector;
 	bool bHasTrailPoints = false;
+	bool bRunning = false;
 };

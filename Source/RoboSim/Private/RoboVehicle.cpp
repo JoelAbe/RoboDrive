@@ -213,3 +213,8 @@ double ARoboVehicle::GetWheelRadiusM() const
 {
 	return Wheels.Num() > 0 ? Wheels[0]->WheelRadiusM : 0.0;
 }
+
+double ARoboVehicle::GetSpeedMS() const
+{
+	return Chassis->GetPhysicsLinearVelocity().Size() * RoboFrames::MetersPerUU;
+}

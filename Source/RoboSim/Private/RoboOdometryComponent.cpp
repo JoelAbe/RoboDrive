@@ -34,6 +34,7 @@ void URoboOdometryComponent::BeginPlay()
 		return;
 	}
 
+	bRunning = false;
 	ResetOdometry();
 }
 
@@ -46,6 +47,8 @@ void URoboOdometryComponent::ResetOdometry()
 	// The estimate starts correct. Everything after this is accumulated error.
 	TruePose = ReadTruePose();
 	EstimatedPose = TruePose;
+
+	TravelledM = 0.0;
 
 	bHasTrailPoints = false;
 
@@ -85,6 +88,20 @@ void URoboOdometryComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		return;
 	}
 
+	if (!bRunning)
+	{
+		// Spawning drops the robot, and it slides and rocks as the suspension
+		// settles. That is real motion no wheel was commanded to make, so
+		// counting it as drift measures the drop rather than the odometry.
+		if (bStartWhenSettled && Vehicle->GetSpeedMS() > SettledSpeedThresholdMS)
+		{
+			return;
+		}
+
+		ResetOdometry();
+		bRunning = true;
+	}
+
 	// Sample on the encoder's own schedule, not the frame's. Real encoders are
 	// polled at a fixed rate, and tying sensor timing to frame rate is the
 	// mistake that makes a simulation subtly untrue.
@@ -102,9 +119,11 @@ void URoboOdometryComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if (bDrawReadout)
 	{
 		DrawDebugString(GetWorld(), FVector(0.0, 0.0, 70.0),
-			FString::Printf(TEXT("odom drift %.2f m  heading %.1f deg"),
-				GetPositionErrorM(), FMath::RadiansToDegrees(GetHeadingErrorRad())),
-			Vehicle, FColor::Yellow, 0.0f, true);
+	FString::Printf(TEXT("odom drift %.2f m over %.1f m (%.1f%%)  heading %.1f deg"),
+		GetPositionErrorM(), GetTravelledM(),
+		GetTravelledM() > 0.01 ? 100.0 * GetPositionErrorM() / GetTravelledM() : 0.0,
+		FMath::RadiansToDegrees(GetHeadingErrorRad())),
+	Vehicle, FColor::Yellow, 0.0f, true);
 	}
 }
 
@@ -129,6 +148,10 @@ void URoboOdometryComponent::SampleOnce(double DeltaSeconds)
 	const double LeftDistanceM = FWheelEncoder::TicksToDistanceM(LeftTicks, TicksPerRevolution, AssumedRadiusM);
 	const double RightDistanceM = FWheelEncoder::TicksToDistanceM(RightTicks, TicksPerRevolution, AssumedRadiusM);
 
+	// Path length, not displacement: this is the denominator for "error per
+	// metre travelled", which is how odometry accuracy is normally quoted.
+	TravelledM += FMath::Abs(0.5 * (LeftDistanceM + RightDistanceM));
+	
 	// Forward kinematics: the same equations that command the wheels, used
 	// backwards to infer how the body must have moved.
 	const RoboDiffDrive::FWheelSpeeds MeasuredSpeeds{

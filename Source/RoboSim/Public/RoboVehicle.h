@@ -71,6 +71,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Robot")
 	double GetWheelRadiusM() const;
 
+	/** Current speed of the chassis, m/s. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	double GetSpeedMS() const;
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
