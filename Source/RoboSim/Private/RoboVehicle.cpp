@@ -5,6 +5,7 @@
 #include "RoboWheel.h"
 #include "RoboFrames.h"
 #include "RoboImuComponent.h"
+#include "RoboLidarComponent.h"
 #include "RoboOdometryComponent.h"
 #include "RoboSimSubsystem.h"
 #include "Camera/CameraComponent.h"
@@ -61,6 +62,10 @@ ARoboVehicle::ARoboVehicle()
 		Wheel->bIsDriven = Setup.bDriven;
 		Wheels.Add(Wheel);
 	}
+
+	Lidar = CreateDefaultSubobject<URoboLidarComponent>(TEXT("Lidar"));
+	Lidar->SetupAttachment(Chassis);
+	Lidar->SetRelativeLocation(FVector(0.0, 0.0, 15.0));   // on top of the chassis
 	
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(Chassis);
