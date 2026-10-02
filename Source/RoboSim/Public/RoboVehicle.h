@@ -75,6 +75,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Robot")
 	double GetSpeedMS() const;
 
+	/** Chassis velocity in REP-103: m/s, right-handed, +Y left. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	FVector GetLinearVelocityMS() const;
+
+	/** Chassis angular velocity in REP-103: rad/s. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	FVector GetAngularVelocityRadS() const;
+
+	/** Chassis orientation in REP-103. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	FQuat GetRotationRos() const;
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
@@ -99,6 +111,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TObjectPtr<class URoboOdometryComponent> Odometry;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
+	TObjectPtr<class URoboImuComponent> Imu;
 	
 	/** Third-person view. Superseded by the operator view in Phase 5. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "View")

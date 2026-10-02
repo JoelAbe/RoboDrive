@@ -4,6 +4,7 @@
 #include "RoboSim.h"
 #include "RoboWheel.h"
 #include "RoboFrames.h"
+#include "RoboImuComponent.h"
 #include "RoboOdometryComponent.h"
 #include "RoboSimSubsystem.h"
 #include "Camera/CameraComponent.h"
@@ -89,6 +90,7 @@ ARoboVehicle::ARoboVehicle()
 	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 
 	Odometry = CreateDefaultSubobject<URoboOdometryComponent>(TEXT("Odometry"));
+	Imu = CreateDefaultSubobject<URoboImuComponent>(TEXT("Imu"));
 }
 
 void ARoboVehicle::OnConstruction(const FTransform& Transform)
@@ -217,4 +219,19 @@ double ARoboVehicle::GetWheelRadiusM() const
 double ARoboVehicle::GetSpeedMS() const
 {
 	return Chassis->GetPhysicsLinearVelocity().Size() * RoboFrames::MetersPerUU;
+}
+
+FVector ARoboVehicle::GetLinearVelocityMS() const
+{
+	return RoboFrames::LinearVelocityToRos(Chassis->GetPhysicsLinearVelocity());
+}
+
+FVector ARoboVehicle::GetAngularVelocityRadS() const
+{
+	return RoboFrames::AngularVelocityToRos(Chassis->GetPhysicsAngularVelocityInDegrees());
+}
+
+FQuat ARoboVehicle::GetRotationRos() const
+{
+	return RoboFrames::RotationToRos(GetActorQuat());
 }
