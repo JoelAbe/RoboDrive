@@ -1,45 +1,42 @@
 ﻿#include "RoboDiffDrive.h"
+#include "RoboTestCommon.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
 namespace
 {
-	constexpr EAutomationTestFlags RoboTestFlags =EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
-
-	constexpr double Tolerance = 1e-9;
-
 	/** A plausible small robot: 40 cm between wheels, 10 cm wheel radius. */
 	constexpr double TestWheelSeparation = 0.4;
 	constexpr double TestWheelRadius = 0.1;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveStraightTest,"RoboDrive.RoboSim.DiffDrive.Straight", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveStraightTest,"RoboDrive.RoboSim.DiffDrive.Straight", RoboTest::Flags)
 
 bool FDiffDriveStraightTest::RunTest(const FString& Parameters)
 {
 	// Driving straight: both wheels run at the body speed.
 	const RoboDiffDrive::FWheelSpeeds Wheels = RoboDiffDrive::ToWheelSpeeds({ 1.0, 0.0 }, TestWheelSeparation);
 
-	TestNearlyEqual(TEXT("Left wheel matches body speed"), Wheels.Left, 1.0, Tolerance);
-	TestNearlyEqual(TEXT("Right wheel matches body speed"), Wheels.Right, 1.0, Tolerance);
+	TestNearlyEqual(TEXT("Left wheel matches body speed"), Wheels.Left, 1.0, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Right wheel matches body speed"), Wheels.Right, 1.0, RoboTest::Tolerance);
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveSpinInPlaceTest,"RoboDrive.RoboSim.DiffDrive.SpinInPlace", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveSpinInPlaceTest,"RoboDrive.RoboSim.DiffDrive.SpinInPlace", RoboTest::Flags)
 
 bool FDiffDriveSpinInPlaceTest::RunTest(const FString& Parameters)
 {
 	// Spinning left on the spot: wheels equal and opposite. A car cannot do this.
 	const RoboDiffDrive::FWheelSpeeds Wheels = RoboDiffDrive::ToWheelSpeeds({ 0.0, 1.0 }, TestWheelSeparation);
 
-	TestNearlyEqual(TEXT("Left wheel reverses"), Wheels.Left, -0.2, Tolerance);
-	TestNearlyEqual(TEXT("Right wheel drives forward"), Wheels.Right, 0.2, Tolerance);
-	TestNearlyEqual(TEXT("Wheels are equal and opposite"),Wheels.Left + Wheels.Right, 0.0, Tolerance);
+	TestNearlyEqual(TEXT("Left wheel reverses"), Wheels.Left, -0.2, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Right wheel drives forward"), Wheels.Right, 0.2, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Wheels are equal and opposite"),Wheels.Left + Wheels.Right, 0.0, RoboTest::Tolerance);
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveTurnDirectionTest, "RoboDrive.RoboSim.DiffDrive.TurnDirection", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveTurnDirectionTest, "RoboDrive.RoboSim.DiffDrive.TurnDirection", RoboTest::Flags)
 
 bool FDiffDriveTurnDirectionTest::RunTest(const FString& Parameters)
 {
@@ -52,7 +49,7 @@ bool FDiffDriveTurnDirectionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveRoundTripTest, "RoboDrive.RoboSim.DiffDrive.RoundTrip", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveRoundTripTest, "RoboDrive.RoboSim.DiffDrive.RoundTrip", RoboTest::Flags)
 
 bool FDiffDriveRoundTripTest::RunTest(const FString& Parameters)
 {
@@ -65,22 +62,22 @@ bool FDiffDriveRoundTripTest::RunTest(const FString& Parameters)
 	{
 		const RoboDiffDrive::FBodyVelocity Recovered = RoboDiffDrive::ToBodyVelocity(RoboDiffDrive::ToWheelSpeeds(Original, TestWheelSeparation), TestWheelSeparation);
 
-		TestNearlyEqual(TEXT("Linear velocity survives the round trip"),Recovered.Linear, Original.Linear, Tolerance);
-		TestNearlyEqual(TEXT("Angular velocity survives the round trip"),Recovered.Angular, Original.Angular, Tolerance);
+		TestNearlyEqual(TEXT("Linear velocity survives the round trip"),Recovered.Linear, Original.Linear, RoboTest::Tolerance);
+		TestNearlyEqual(TEXT("Angular velocity survives the round trip"),Recovered.Angular, Original.Angular, RoboTest::Tolerance);
 	}
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveWheelRotationTest,"RoboDrive.RoboSim.DiffDrive.WheelRotation", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveWheelRotationTest,"RoboDrive.RoboSim.DiffDrive.WheelRotation", RoboTest::Flags)
 
 bool FDiffDriveWheelRotationTest::RunTest(const FString& Parameters)
 {
 	// A 0.1 m wheel rolling at 1 m/s turns at 10 rad/s.
-	TestNearlyEqual(TEXT("1 m/s on a 0.1 m wheel is 10 rad/s"),RoboDiffDrive::ToWheelAngularSpeed(1.0, TestWheelRadius), 10.0, Tolerance);
+	TestNearlyEqual(TEXT("1 m/s on a 0.1 m wheel is 10 rad/s"),RoboDiffDrive::ToWheelAngularSpeed(1.0, TestWheelRadius), 10.0, RoboTest::Tolerance);
 
 	TestNearlyEqual(TEXT("Wheel speed conversion round trips"),
 		RoboDiffDrive::ToWheelLinearSpeed(RoboDiffDrive::ToWheelAngularSpeed(0.75, TestWheelRadius), TestWheelRadius),
-		0.75, Tolerance);
+		0.75, RoboTest::Tolerance);
 	return true;
 }
 
@@ -93,7 +90,7 @@ bool FDiffDriveWheelRotationTest::RunTest(const FString& Parameters)
  * rotation's contribution at that point (v = v_body + omega x r). If the
  * kinematics are right, they agree with that.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveRigidBodyConsistencyTest,"RoboDrive.RoboSim.DiffDrive.RigidBodyConsistency", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveRigidBodyConsistencyTest,"RoboDrive.RoboSim.DiffDrive.RigidBodyConsistency", RoboTest::Flags)
 
 bool FDiffDriveRigidBodyConsistencyTest::RunTest(const FString& Parameters)
 {
@@ -111,9 +108,9 @@ bool FDiffDriveRigidBodyConsistencyTest::RunTest(const FString& Parameters)
 	const FVector RightPointVelocity = BodyVelocity + FVector::CrossProduct(Spin, RightOffset);
 
 	TestNearlyEqual(TEXT("Left wheel matches rigid body motion at that point"),
-		Wheels.Left, LeftPointVelocity.X, Tolerance);
+		Wheels.Left, LeftPointVelocity.X, RoboTest::Tolerance);
 	TestNearlyEqual(TEXT("Right wheel matches rigid body motion at that point"),
-		Wheels.Right, RightPointVelocity.X, Tolerance);
+		Wheels.Right, RightPointVelocity.X, RoboTest::Tolerance);
 	return true;
 }
 

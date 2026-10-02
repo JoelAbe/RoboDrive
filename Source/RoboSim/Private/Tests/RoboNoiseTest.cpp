@@ -1,19 +1,15 @@
 ﻿#include "RoboNoise.h"
+#include "RoboTestCommon.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
-
-namespace
-{
-	constexpr EAutomationTestFlags RoboTestFlags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
-}
 
 /**
  * Characterises the noise model statistically: draw many samples and check the
  * distribution is the one that was asked for. This is the test that makes
  * "Gaussian noise with sigma = x" a claim rather than a comment.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNoiseDistributionTest, "RoboDrive.RoboSim.Noise.Distribution", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNoiseDistributionTest, "RoboDrive.RoboSim.Noise.Distribution", RoboTest::Flags)
 
 bool FNoiseDistributionTest::RunTest(const FString& Parameters)
 {
@@ -44,7 +40,7 @@ bool FNoiseDistributionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNoiseIsReproducibleTest, "RoboDrive.RoboSim.Noise.Reproducible", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNoiseIsReproducibleTest, "RoboDrive.RoboSim.Noise.Reproducible", RoboTest::Flags)
 
 bool FNoiseIsReproducibleTest::RunTest(const FString& Parameters)
 {
@@ -61,7 +57,7 @@ bool FNoiseIsReproducibleTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNoiseZeroSigmaTest, "RoboDrive.RoboSim.Noise.ZeroSigma", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNoiseZeroSigmaTest, "RoboDrive.RoboSim.Noise.ZeroSigma", RoboTest::Flags)
 
 bool FNoiseZeroSigmaTest::RunTest(const FString& Parameters)
 {

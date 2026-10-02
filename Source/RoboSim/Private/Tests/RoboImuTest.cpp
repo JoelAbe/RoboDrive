@@ -1,18 +1,16 @@
 ﻿#include "RoboImu.h"
+#include "RoboTestCommon.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
 namespace
 {
-	constexpr EAutomationTestFlags RoboTestFlags =
-		EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
-
-	constexpr double G = 9.80665;
+	constexpr double ImuG = 9.80665;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FImuAtRestTest,
-	"RoboDrive.RoboSim.Imu.AtRest", RoboTestFlags)
+	"RoboDrive.RoboSim.Imu.AtRest", RoboTest::Flags)
 
 bool FImuAtRestTest::RunTest(const FString& Parameters)
 {
@@ -20,14 +18,14 @@ bool FImuAtRestTest::RunTest(const FString& Parameters)
 	// that separates proper acceleration from rate of change of velocity.
 	const FVector Reading = RoboImu::ProperAcceleration(FVector::ZeroVector, FQuat::Identity);
 
-	TestNearlyEqual(TEXT("Reads +1 g upward at rest"), Reading.Z, G, 1e-9);
+	TestNearlyEqual(TEXT("Reads +1 g upward at rest"), Reading.Z, ImuG, 1e-9);
 	TestNearlyEqual(TEXT("Nothing along X"), Reading.X, 0.0, 1e-9);
 	TestNearlyEqual(TEXT("Nothing along Y"), Reading.Y, 0.0, 1e-9);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FImuFreeFallTest,
-	"RoboDrive.RoboSim.Imu.FreeFall", RoboTestFlags)
+	"RoboDrive.RoboSim.Imu.FreeFall", RoboTest::Flags)
 
 bool FImuFreeFallTest::RunTest(const FString& Parameters)
 {
@@ -41,7 +39,7 @@ bool FImuFreeFallTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FImuTiltTest,
-	"RoboDrive.RoboSim.Imu.Tilt", RoboTestFlags)
+	"RoboDrive.RoboSim.Imu.Tilt", RoboTest::Flags)
 
 bool FImuTiltTest::RunTest(const FString& Parameters)
 {
@@ -51,14 +49,14 @@ bool FImuTiltTest::RunTest(const FString& Parameters)
 	const FVector Reading = RoboImu::ProperAcceleration(FVector::ZeroVector, PitchedDown);
 
 	TestNearlyEqual(TEXT("Gravity now appears along the body X axis"),
-		FMath::Abs(Reading.X), G, 1e-6);
+		FMath::Abs(Reading.X), ImuG, 1e-6);
 	TestNearlyEqual(TEXT("And no longer along body Z"), Reading.Z, 0.0, 1e-6);
-	TestNearlyEqual(TEXT("Magnitude is still one g"), Reading.Size(), G, 1e-9);
+	TestNearlyEqual(TEXT("Magnitude is still one g"), Reading.Size(), ImuG, 1e-9);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FImuAccelerationTest,
-	"RoboDrive.RoboSim.Imu.Acceleration", RoboTestFlags)
+	"RoboDrive.RoboSim.Imu.Acceleration", RoboTest::Flags)
 
 bool FImuAccelerationTest::RunTest(const FString& Parameters)
 {
@@ -69,12 +67,12 @@ bool FImuAccelerationTest::RunTest(const FString& Parameters)
 		RoboImu::ProperAcceleration(FVector(2.0, 0.0, 0.0), FQuat::Identity);
 
 	TestNearlyEqual(TEXT("Forward acceleration appears on X"), Reading.X, 2.0, 1e-9);
-	TestNearlyEqual(TEXT("Gravity is still on Z"), Reading.Z, G, 1e-9);
+	TestNearlyEqual(TEXT("Gravity is still on Z"), Reading.Z, ImuG, 1e-9);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FImuBodyFrameTest,
-	"RoboDrive.RoboSim.Imu.BodyFrame", RoboTestFlags)
+	"RoboDrive.RoboSim.Imu.BodyFrame", RoboTest::Flags)
 
 bool FImuBodyFrameTest::RunTest(const FString& Parameters)
 {
@@ -90,7 +88,7 @@ bool FImuBodyFrameTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FImuGyroBodyFrameTest,
-	"RoboDrive.RoboSim.Imu.GyroBodyFrame", RoboTestFlags)
+	"RoboDrive.RoboSim.Imu.GyroBodyFrame", RoboTest::Flags)
 
 bool FImuGyroBodyFrameTest::RunTest(const FString& Parameters)
 {

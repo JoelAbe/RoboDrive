@@ -1,14 +1,13 @@
-﻿#include "RoboWheelEncoder.h"
+﻿#include "RoboTestCommon.h"
+#include "RoboWheelEncoder.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
 namespace
 {
-	constexpr EAutomationTestFlags RoboTestFlags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
-
-	constexpr int32 TicksPerRev = 2048;
-	constexpr double WheelRadiusM = 0.1;
+	constexpr int32 EncoderTicksPerRev = 2048;
+	constexpr double EncoderWheelRadiusM = 0.1;
 
 	/** No noise: most of these tests are about quantisation and scaling. */
 	int64 UpdateClean(FWheelEncoder& Encoder, double SpeedRadS, double DeltaSeconds)
@@ -19,27 +18,27 @@ namespace
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEncoderCountsRevolutionTest,
-	"RoboDrive.RoboSim.Encoder.CountsRevolution", RoboTestFlags)
+	"RoboDrive.RoboSim.Encoder.CountsRevolution", RoboTest::Flags)
 
 bool FEncoderCountsRevolutionTest::RunTest(const FString& Parameters)
 {
-	FWheelEncoder Encoder(TicksPerRev);
+	FWheelEncoder Encoder(EncoderTicksPerRev);
 
 	// Exactly one revolution: 2*pi rad/s for one second.
 	UpdateClean(Encoder, UE_DOUBLE_TWO_PI, 1.0);
 
 	TestEqual(TEXT("One revolution is one full tick count"),
-		Encoder.GetTickCount(), (int64)TicksPerRev);
+		Encoder.GetTickCount(), (int64)EncoderTicksPerRev);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEncoderKeepsRemainderTest,
-	"RoboDrive.RoboSim.Encoder.KeepsRemainder", RoboTestFlags)
+	"RoboDrive.RoboSim.Encoder.KeepsRemainder", RoboTest::Flags)
 
 bool FEncoderKeepsRemainderTest::RunTest(const FString& Parameters)
 {
-	FWheelEncoder Encoder(TicksPerRev);
-	const double RadiansPerTick = UE_DOUBLE_TWO_PI / TicksPerRev;
+	FWheelEncoder Encoder(EncoderTicksPerRev);
+	const double RadiansPerTick = UE_DOUBLE_TWO_PI / EncoderTicksPerRev;
 
 	// Two half-ticks make a whole tick: quantisation must not lose rotation,
 	// or slow driving would silently under-report distance forever.
@@ -51,11 +50,11 @@ bool FEncoderKeepsRemainderTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEncoderReversesTest,
-	"RoboDrive.RoboSim.Encoder.Reverses", RoboTestFlags)
+	"RoboDrive.RoboSim.Encoder.Reverses", RoboTest::Flags)
 
 bool FEncoderReversesTest::RunTest(const FString& Parameters)
 {
-	FWheelEncoder Encoder(TicksPerRev);
+	FWheelEncoder Encoder(EncoderTicksPerRev);
 
 	UpdateClean(Encoder, UE_DOUBLE_TWO_PI, 1.0);
 	UpdateClean(Encoder, -UE_DOUBLE_TWO_PI, 1.0);
@@ -66,20 +65,20 @@ bool FEncoderReversesTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEncoderDistanceTest,
-	"RoboDrive.RoboSim.Encoder.Distance", RoboTestFlags)
+	"RoboDrive.RoboSim.Encoder.Distance", RoboTest::Flags)
 
 bool FEncoderDistanceTest::RunTest(const FString& Parameters)
 {
-	FWheelEncoder Encoder(TicksPerRev);
+	FWheelEncoder Encoder(EncoderTicksPerRev);
 
 	// One revolution of a 0.1 m wheel rolls its circumference, 2*pi*0.1 m.
 	UpdateClean(Encoder, UE_DOUBLE_TWO_PI, 1.0);
 
 	const double DistanceM = FWheelEncoder::TicksToDistanceM(
-		Encoder.GetTickCount(), TicksPerRev, WheelRadiusM);
+		Encoder.GetTickCount(), EncoderTicksPerRev, EncoderWheelRadiusM);
 
 	TestNearlyEqual(TEXT("Distance is one circumference"),
-		DistanceM, UE_DOUBLE_TWO_PI * WheelRadiusM, 1e-9);
+		DistanceM, UE_DOUBLE_TWO_PI * EncoderWheelRadiusM, 1e-9);
 	return true;
 }
 
@@ -89,11 +88,11 @@ bool FEncoderDistanceTest::RunTest(const FString& Parameters)
  * ever. This is what separates a systematic error from a noisy one.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEncoderRadiusErrorTest,
-	"RoboDrive.RoboSim.Encoder.RadiusError", RoboTestFlags)
+	"RoboDrive.RoboSim.Encoder.RadiusError", RoboTest::Flags)
 
 bool FEncoderRadiusErrorTest::RunTest(const FString& Parameters)
 {
-	FWheelEncoder Encoder(TicksPerRev);
+	FWheelEncoder Encoder(EncoderTicksPerRev);
 
 	constexpr int32 Revolutions = 100;
 	for (int32 Index = 0; Index < Revolutions; ++Index)
@@ -102,10 +101,10 @@ bool FEncoderRadiusErrorTest::RunTest(const FString& Parameters)
 	}
 
 	const double TrueDistanceM = FWheelEncoder::TicksToDistanceM(
-		Encoder.GetTickCount(), TicksPerRev, WheelRadiusM);
+		Encoder.GetTickCount(), EncoderTicksPerRev, EncoderWheelRadiusM);
 
 	const double BelievedDistanceM = FWheelEncoder::TicksToDistanceM(
-		Encoder.GetTickCount(), TicksPerRev, WheelRadiusM * 1.02);
+		Encoder.GetTickCount(), EncoderTicksPerRev, EncoderWheelRadiusM * 1.02);
 
 	TestNearlyEqual(TEXT("A 2 percent radius error is a 2 percent distance error"),
 		BelievedDistanceM / TrueDistanceM, 1.02, 1e-9);
@@ -117,13 +116,13 @@ bool FEncoderRadiusErrorTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEncoderNoiseDoesNotBiasTest,
-	"RoboDrive.RoboSim.Encoder.NoiseDoesNotBias", RoboTestFlags)
+	"RoboDrive.RoboSim.Encoder.NoiseDoesNotBias", RoboTest::Flags)
 
 bool FEncoderNoiseDoesNotBiasTest::RunTest(const FString& Parameters)
 {
 	// Noisy but unbiased: over many steps the random errors largely cancel,
 	// unlike the radius error above. Different shapes of wrongness.
-	FWheelEncoder Encoder(TicksPerRev);
+	FWheelEncoder Encoder(EncoderTicksPerRev);
 	FRandomStream Stream(4242);
 
 	constexpr int32 Steps = 10000;
@@ -136,7 +135,7 @@ bool FEncoderNoiseDoesNotBiasTest::RunTest(const FString& Parameters)
 	}
 
 	const double MeasuredRadians =
-		Encoder.GetTickCount() * UE_DOUBLE_TWO_PI / TicksPerRev;
+		Encoder.GetTickCount() * UE_DOUBLE_TWO_PI / EncoderTicksPerRev;
 	const double TrueRadians = SpeedRadS * StepSeconds * Steps;
 
 	TestTrue(TEXT("Noise stays small relative to distance travelled"),

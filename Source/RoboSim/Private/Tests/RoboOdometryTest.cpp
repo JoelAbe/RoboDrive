@@ -1,29 +1,23 @@
 ﻿#include "RoboOdometry.h"
+#include "RoboTestCommon.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-namespace
-{
-	constexpr EAutomationTestFlags RoboTestFlags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
-
-	constexpr double Tolerance = 1e-9;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryStraightTest, "RoboDrive.RoboSim.Odometry.Straight", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryStraightTest, "RoboDrive.RoboSim.Odometry.Straight", RoboTest::Flags)
 
 bool FOdometryStraightTest::RunTest(const FString& Parameters)
 {
 	// Facing +X, 1 m/s for one second.
 	const FPose2D Result = RoboOdometry::Integrate(FPose2D{}, { 1.0, 0.0 }, 1.0);
 
-	TestNearlyEqual(TEXT("Moved one metre forward"), Result.X, 1.0, Tolerance);
-	TestNearlyEqual(TEXT("No sideways movement"), Result.Y, 0.0, Tolerance);
-	TestNearlyEqual(TEXT("Heading unchanged"), Result.YawRad, 0.0, Tolerance);
+	TestNearlyEqual(TEXT("Moved one metre forward"), Result.X, 1.0, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("No sideways movement"), Result.Y, 0.0, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Heading unchanged"), Result.YawRad, 0.0, RoboTest::Tolerance);
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryRespectsHeadingTest, "RoboDrive.RoboSim.Odometry.RespectsHeading", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryRespectsHeadingTest, "RoboDrive.RoboSim.Odometry.RespectsHeading", RoboTest::Flags)
 
 bool FOdometryRespectsHeadingTest::RunTest(const FString& Parameters)
 {
@@ -39,16 +33,16 @@ bool FOdometryRespectsHeadingTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometrySpinInPlaceTest, "RoboDrive.RoboSim.Odometry.SpinInPlace", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometrySpinInPlaceTest, "RoboDrive.RoboSim.Odometry.SpinInPlace", RoboTest::Flags)
 
 bool FOdometrySpinInPlaceTest::RunTest(const FString& Parameters)
 {
 	// Turning without driving must not move the position at all.
 	const FPose2D Result = RoboOdometry::Integrate(FPose2D{}, { 0.0, 1.0 }, 1.0);
 
-	TestNearlyEqual(TEXT("Did not move in X"), Result.X, 0.0, Tolerance);
-	TestNearlyEqual(TEXT("Did not move in Y"), Result.Y, 0.0, Tolerance);
-	TestNearlyEqual(TEXT("Turned one radian"), Result.YawRad, 1.0, Tolerance);
+	TestNearlyEqual(TEXT("Did not move in X"), Result.X, 0.0, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Did not move in Y"), Result.Y, 0.0, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Turned one radian"), Result.YawRad, 1.0, RoboTest::Tolerance);
 	return true;
 }
 
@@ -60,7 +54,7 @@ bool FOdometrySpinInPlaceTest::RunTest(const FString& Parameters)
  * size. Straight-line stepping would cut every corner and land short, inside
  * the circle, by an amount that grows with the step.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryCircleClosesTest, "RoboDrive.RoboSim.Odometry.CircleCloses", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryCircleClosesTest, "RoboDrive.RoboSim.Odometry.CircleCloses", RoboTest::Flags)
 
 bool FOdometryCircleClosesTest::RunTest(const FString& Parameters)
 {
@@ -84,7 +78,7 @@ bool FOdometryCircleClosesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryArcGeometryTest, "RoboDrive.RoboSim.Odometry.ArcGeometry", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryArcGeometryTest, "RoboDrive.RoboSim.Odometry.ArcGeometry", RoboTest::Flags)
 
 bool FOdometryArcGeometryTest::RunTest(const FString& Parameters)
 {
@@ -102,7 +96,7 @@ bool FOdometryArcGeometryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryWrapsHeadingTest, "RoboDrive.RoboSim.Odometry.WrapsHeading", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryWrapsHeadingTest, "RoboDrive.RoboSim.Odometry.WrapsHeading", RoboTest::Flags)
 
 bool FOdometryWrapsHeadingTest::RunTest(const FString& Parameters)
 {
@@ -114,7 +108,7 @@ bool FOdometryWrapsHeadingTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryErrorTest, "RoboDrive.RoboSim.Odometry.Error", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOdometryErrorTest, "RoboDrive.RoboSim.Odometry.Error", RoboTest::Flags)
 
 bool FOdometryErrorTest::RunTest(const FString& Parameters)
 {
@@ -123,7 +117,7 @@ bool FOdometryErrorTest::RunTest(const FString& Parameters)
 	Estimate.X = 3.0;
 	Estimate.Y = 4.0;
 
-	TestNearlyEqual(TEXT("Position error is the straight-line distance"), RoboOdometry::PositionErrorM(Estimate, Truth), 5.0, Tolerance);
+	TestNearlyEqual(TEXT("Position error is the straight-line distance"), RoboOdometry::PositionErrorM(Estimate, Truth), 5.0, RoboTest::Tolerance);
 
 	// Headings either side of the wrap are close, not nearly a full turn apart.
 	Truth.YawRad = FMath::DegreesToRadians(179.0);

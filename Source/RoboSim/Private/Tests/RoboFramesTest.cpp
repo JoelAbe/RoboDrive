@@ -1,16 +1,10 @@
 ﻿#include "RoboFrames.h"
+#include "RoboTestCommon.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-namespace 
-{
-	constexpr EAutomationTestFlags RoboTestFlags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
-
-	constexpr double Tolerance = 1e-9;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesPositionTest, "RoboDrive.RoboSim.Frames.Position", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesPositionTest, "RoboDrive.RoboSim.Frames.Position", RoboTest::Flags)
 
 bool FRoboFramesPositionTest::RunTest(const FString& Parameters)
 {
@@ -18,22 +12,22 @@ bool FRoboFramesPositionTest::RunTest(const FString& Parameters)
 	const FVector UePoint(100.0, 200.0, 300.0);
 	const FVector RosPoint = RoboFrames::PositionToRos(UePoint);
 
-	TestNearlyEqual(TEXT("Forward stays forward"), RosPoint.X, 1.0, Tolerance);
-	TestNearlyEqual(TEXT("Right becomes negative Y"), RosPoint.Y, -2.0, Tolerance);
-	TestNearlyEqual(TEXT("Up stays up"), RosPoint.Z, 3.0, Tolerance);
+	TestNearlyEqual(TEXT("Forward stays forward"), RosPoint.X, 1.0, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Right becomes negative Y"), RosPoint.Y, -2.0, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Up stays up"), RosPoint.Z, 3.0, RoboTest::Tolerance);
 
-	TestTrue(TEXT("Round trip returns the original point"),RoboFrames::PositionToUe(RosPoint).Equals(UePoint, Tolerance));
+	TestTrue(TEXT("Round trip returns the original point"),RoboFrames::PositionToUe(RosPoint).Equals(UePoint, RoboTest::Tolerance));
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesYawTest,"RoboDrive.RoboSim.Frames.Yaw", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesYawTest,"RoboDrive.RoboSim.Frames.Yaw", RoboTest::Flags)
 
 bool FRoboFramesYawTest::RunTest(const FString& Parameters)
 {
 	// A 90-degree right turn: +90 in Unreal, -pi/2 in REP-103.
-	TestNearlyEqual(TEXT("Right turn is negative yaw"),RoboFrames::YawToRos(90.0), -UE_DOUBLE_HALF_PI, Tolerance);
+	TestNearlyEqual(TEXT("Right turn is negative yaw"),RoboFrames::YawToRos(90.0), -UE_DOUBLE_HALF_PI, RoboTest::Tolerance);
 
-	TestNearlyEqual(TEXT("Round trip returns the original yaw"),RoboFrames::YawToUe(RoboFrames::YawToRos(37.5)), 37.5, Tolerance);
+	TestNearlyEqual(TEXT("Round trip returns the original yaw"),RoboFrames::YawToUe(RoboFrames::YawToRos(37.5)), 37.5, RoboTest::Tolerance);
 	return true;
 }
 
@@ -45,7 +39,7 @@ bool FRoboFramesYawTest::RunTest(const FString& Parameters)
  * It then checks the position rule, and the yaw rule agrees about the answer.
  */
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesHeadingConsistencyTest,"RoboDrive.RoboSim.Frames.HeadingConsistency", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesHeadingConsistencyTest,"RoboDrive.RoboSim.Frames.HeadingConsistency", RoboTest::Flags)
 
 bool FRoboFramesHeadingConsistencyTest::RunTest(const FString& Parameters)
 {
@@ -66,17 +60,17 @@ bool FRoboFramesHeadingConsistencyTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesAngularVelocityTest, "RoboDrive.RoboSim.Frames.AngularVelocity", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesAngularVelocityTest, "RoboDrive.RoboSim.Frames.AngularVelocity", RoboTest::Flags)
 
 bool FRoboFramesAngularVelocityTest::RunTest(const FString& Parameters)
 {
 	// Rotation about Z: axis survives the mirror, spin reverses, so it flips.
 	const FVector Yaw = RoboFrames::AngularVelocityToRos(FVector(0.0, 0.0, 180.0));
-	TestNearlyEqual(TEXT("Yaw rate flips sign and becomes radians"), Yaw.Z, -UE_DOUBLE_PI, Tolerance);
+	TestNearlyEqual(TEXT("Yaw rate flips sign and becomes radians"), Yaw.Z, -UE_DOUBLE_PI, RoboTest::Tolerance);
 
 	// Rotation about Y: axis and spin both reverse, so the sign survives.
 	const FVector Pitch = RoboFrames::AngularVelocityToRos(FVector(0.0, 90.0, 0.0));
-	TestNearlyEqual(TEXT("Pitch rate keeps its sign"), Pitch.Y, UE_DOUBLE_HALF_PI, Tolerance);
+	TestNearlyEqual(TEXT("Pitch rate keeps its sign"), Pitch.Y, UE_DOUBLE_HALF_PI, RoboTest::Tolerance);
 
 	const FVector Original(15.0, -40.0, 73.0);
 	TestTrue(TEXT("Angular velocity survives a round trip"),
@@ -90,7 +84,7 @@ bool FRoboFramesAngularVelocityTest::RunTest(const FString& Parameters)
  * measured turn rate would drift apart, which is nearly impossible to spot by
  * eye and ruinous for odometry.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesYawRateConsistencyTest, "RoboDrive.RoboSim.Frames.YawRateConsistency", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesYawRateConsistencyTest, "RoboDrive.RoboSim.Frames.YawRateConsistency", RoboTest::Flags)
 
 bool FRoboFramesYawRateConsistencyTest::RunTest(const FString& Parameters)
 {
@@ -114,7 +108,7 @@ bool FRoboFramesYawRateConsistencyTest::RunTest(const FString& Parameters)
  * rotation: rotating a point and converting must equal converting both and
  * then rotating. This is what catches an inconsistent handedness fix.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesRotationConsistencyTest, "RoboDrive.RoboSim.Frames.RotationConsistency", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesRotationConsistencyTest, "RoboDrive.RoboSim.Frames.RotationConsistency", RoboTest::Flags)
 
 bool FRoboFramesRotationConsistencyTest::RunTest(const FString& Parameters)
 {
@@ -137,7 +131,7 @@ bool FRoboFramesRotationConsistencyTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesRotationMatchesYawTest, "RoboDrive.RoboSim.Frames.RotationMatchesYaw", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesRotationMatchesYawTest, "RoboDrive.RoboSim.Frames.RotationMatchesYaw", RoboTest::Flags)
 
 bool FRoboFramesRotationMatchesYawTest::RunTest(const FString& Parameters)
 {
@@ -161,7 +155,7 @@ bool FRoboFramesRotationMatchesYawTest::RunTest(const FString& Parameters)
  * and linear velocity flip as ordinary vectors. It is the cleanest check that
  * the two rules belong together.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesAngularVelocityConsistencyTest, "RoboDrive.RoboSim.Frames.AngularVelocityConsistency", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRoboFramesAngularVelocityConsistencyTest, "RoboDrive.RoboSim.Frames.AngularVelocityConsistency", RoboTest::Flags)
 
 bool FRoboFramesAngularVelocityConsistencyTest::RunTest(const FString& Parameters)
 {

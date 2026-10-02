@@ -9,7 +9,7 @@
 
 namespace
 {
-	constexpr int32 MaxSamplesPerTick = 32;
+	constexpr int32 ImuMaxSamplesPerTick = 32;
 }
 
 URoboImuComponent::URoboImuComponent()
@@ -65,7 +65,7 @@ void URoboImuComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	const double NowSeconds = Sim->GetSimTimeSeconds();
 
 	int32 Samples = 0;
-	while (NowSeconds >= NextSampleTimeSeconds && Samples < MaxSamplesPerTick)
+	while (NowSeconds >= NextSampleTimeSeconds && Samples < ImuMaxSamplesPerTick)
 	{
 		SampleOnce(IntervalSeconds, NextSampleTimeSeconds);
 		NextSampleTimeSeconds += IntervalSeconds;

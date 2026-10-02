@@ -14,7 +14,7 @@ namespace
 	constexpr double TrailHeightUU = 3.0;
 
 	/** Never run more than this many catch-up samples in one frame. */
-	constexpr int32 MaxSamplesPerTick = 16;
+	constexpr int32 OdometryMaxSamplesPerTick = 16;
 }
 
 URoboOdometryComponent::URoboOdometryComponent()
@@ -109,7 +109,7 @@ void URoboOdometryComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	const double NowSeconds = Sim->GetSimTimeSeconds();
 
 	int32 SamplesThisTick = 0;
-	while (NowSeconds >= NextSampleTimeSeconds && SamplesThisTick < MaxSamplesPerTick)
+	while (NowSeconds >= NextSampleTimeSeconds && SamplesThisTick < OdometryMaxSamplesPerTick)
 	{
 		SampleOnce(IntervalSeconds);
 		NextSampleTimeSeconds += IntervalSeconds;
