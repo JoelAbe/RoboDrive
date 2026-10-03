@@ -8,6 +8,7 @@
 #include "RoboImuComponent.h"
 #include "RoboLidarComponent.h"
 #include "RoboOdometryComponent.h"
+#include "RoboRecorderComponent.h"
 #include "RoboSimSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -101,6 +102,8 @@ ARoboVehicle::ARoboVehicle()
 
 	Odometry = CreateDefaultSubobject<URoboOdometryComponent>(TEXT("Odometry"));
 	Imu = CreateDefaultSubobject<URoboImuComponent>(TEXT("Imu"));
+
+	Recorder = CreateDefaultSubobject<URoboRecorderComponent>(TEXT("Recorder"));
 }
 
 void ARoboVehicle::OnConstruction(const FTransform& Transform)
@@ -169,6 +172,8 @@ void ARoboVehicle::Tick(float DeltaSeconds)
 
 	// Whoever wins arbitration drives. Nothing fresh means a stop.
 	const FDriveCommand Command = Arbiter.Evaluate(NowSeconds);
+
+	LastCommand = Command;
 
 	if (bDrawDebugState)
 	{

@@ -78,3 +78,23 @@ In rough order of expected benefit:
 
 Debug drawing should stay off whenever cost is being measured, and probably
 whenever more than a few hundred beams are in use.
+
+## Camera
+
+Measured the same way, varying resolution and frame rate with the lidar
+visualisation disabled.
+
+GPU time was close to flat across 320x240, 640x480 and 1280x720, rising
+slightly only at 1280x720. The real-time factor was unaffected at every
+setting tested.
+
+Two caveats on that result:
+
+- **The cycle counter around the capture measures almost nothing**, because
+  `CaptureScene()` only queues work. The cost is GPU-side and appears in
+  `GPU Time` from `stat unit`. A CPU profiler reporting a camera as free is
+  measuring the wrong thing.
+- **The test level is nearly empty.** A scene capture re-renders the whole
+  scene from another viewpoint, so its cost scales with scene complexity as
+  well as pixels. In a detailed environment the camera would likely become the
+  dominant sensor cost, and this measurement would not transfer.

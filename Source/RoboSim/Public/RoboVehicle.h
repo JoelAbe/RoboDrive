@@ -87,6 +87,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Robot")
 	FQuat GetRotationRos() const;
 
+	/** The command that won arbitration most recently. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	FDriveCommand GetActiveCommand() const { return LastCommand; }
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
@@ -121,6 +125,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TObjectPtr<class URoboCameraComponent> Camera2D;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
+	TObjectPtr<class URoboRecorderComponent> Recorder;
+	
 	/** Third-person view. Superseded by the operator view in Phase 5. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "View")
 	TObjectPtr<class USpringArmComponent> CameraBoom;
@@ -131,4 +138,5 @@ protected:
 private:
 	FDriveArbiter Arbiter;
 	RoboDiffDrive::FWheelSpeeds LastWheelSpeeds;
+	FDriveCommand LastCommand;
 };
