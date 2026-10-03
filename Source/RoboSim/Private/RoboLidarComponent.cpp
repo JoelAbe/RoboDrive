@@ -3,8 +3,13 @@
 #include "RoboFrames.h"
 #include "RoboNoise.h"
 #include "RoboSimSubsystem.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "Stats/Stats.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+
+DECLARE_STATS_GROUP(TEXT("RoboSim"), STATGROUP_RoboSim, STATCAT_Advanced);
+DECLARE_CYCLE_STAT(TEXT("Lidar Sweep"), STAT_RoboLidarSweep, STATGROUP_RoboSim);
 
 URoboLidarComponent::URoboLidarComponent()
 {
@@ -42,6 +47,11 @@ void URoboLidarComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void URoboLidarComponent::Sweep(double NowSeconds)
 {
+	// Names this work in Unreal Insights, so its cost is attributable rather
+	// than hidden inside the component tick.
+	TRACE_CPUPROFILER_EVENT_SCOPE(RoboLidarSweep);
+	SCOPE_CYCLE_COUNTER(STAT_RoboLidarSweep);
+	
 	const UWorld* World = GetWorld();
 	if (World == nullptr)
 	{

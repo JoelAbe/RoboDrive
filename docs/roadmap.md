@@ -33,6 +33,9 @@ autonomy and back, and stops by itself if that stub is killed mid-drive.
 
 ## Phase 2: It senses, deterministically
 
+Profiling results for the lidar are recorded in
+[profiling-lidar.md](profiling-lidar.md).
+
 Sim-time clock with real-time and synchronous stepping modes. Wheel encoders,
 IMU, lidar and camera, each with its own update rate and noise model. Ground
 truth published separately from sensor output. Wheel odometry with estimated
