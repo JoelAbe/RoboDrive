@@ -118,6 +118,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TObjectPtr<class URoboLidarComponent> Lidar;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
+	TObjectPtr<class URoboCameraComponent> Camera2D;
+	
 	/** Third-person view. Superseded by the operator view in Phase 5. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "View")
 	TObjectPtr<class USpringArmComponent> CameraBoom;

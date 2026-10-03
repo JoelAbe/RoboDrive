@@ -4,11 +4,10 @@
 #include "RoboNoise.h"
 #include "RoboSimSubsystem.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
-#include "Stats/Stats.h"
 #include "DrawDebugHelpers.h"
+#include "RoboSim.h"
 #include "Engine/World.h"
 
-DECLARE_STATS_GROUP(TEXT("RoboSim"), STATGROUP_RoboSim, STATCAT_Advanced);
 DECLARE_CYCLE_STAT(TEXT("Lidar Sweep"), STAT_RoboLidarSweep, STATGROUP_RoboSim);
 
 URoboLidarComponent::URoboLidarComponent()
