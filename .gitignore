@@ -81,3 +81,5 @@ DerivedDataCache/*
 # JetBrains Rider workspace and per-user settings
 .idea/
 *.DotSettings.user
+
+*.venv/
