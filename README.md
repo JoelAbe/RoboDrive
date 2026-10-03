@@ -4,10 +4,12 @@ A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, and a test harness that runs without the editor.
 
-> **Status:** Phase 1 complete. The robot drives from velocity commands
-> through real differential drive kinematics on Chaos physics, with keyboard
-> and in-engine sources arbitrated by priority and a watchdog. Sensors are
-> Phase 2. See the [roadmap](docs/roadmap.md).
+> **Status:** Phase 2 complete. The robot drives from velocity commands
+> through real differential drive kinematics on Chaos physics, carries wheel
+> encoders, an IMU, a lidar and a camera on a simulated clock, and estimates
+> its own pose by dead reckoning. Runs are recorded to CSV, replayed, and
+> analysed in Python. Next is an external API and data-driven scenarios.
+> See the [roadmap](docs/roadmap.md).
 
 ## Requirements
 
@@ -64,6 +66,13 @@ the left. Unreal's centimetres and +Y-right frame appear only at the boundary,
 in [`RoboFrames.h`](Source/RoboSim/Public/RoboFrames.h). This is what lets
 published formulas be used as written.
 ([ADR 0002](docs/decisions/0002-rep103-internal-frames.md))
+
+## Measurements
+
+- [Odometry drift](docs/odometry-drift.md) — how calibration error, encoder
+  noise and wheel slip each show up, measured against ground truth.
+- [Lidar profiling](docs/profiling-lidar.md) — sensor cost against ray count,
+  and the measured real-time ceiling.
 
 ## Layout
 

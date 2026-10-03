@@ -7,8 +7,8 @@ phase is not done until its tests and documentation exist.
 |---|---|---|
 | 0 | Foundations: module structure, coordinate frames, test runner | Done |
 | 1 | Vehicle, differential-drive kinematics, control arbitration | Done |
-| 2 | Sensors, odometry, deterministic time, record and replay | In progress |
-| 3 | External simulation API and data-driven scenarios | Not started |
+| 2 | Sensors, odometry, deterministic time, record and replay | Done |
+| 3 | External simulation API and data-driven scenarios | In progress |
 | 4 | In-engine autonomy, judged by the scenario suite | Not started |
 | 5 | Operator view | Not started |
 | 6 | ROS 2 adapter (software-in-the-loop) | Not started |

@@ -133,6 +133,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TObjectPtr<class URoboRecorderComponent> Recorder;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
+	TObjectPtr<class URoboReplayComponent> Replayer;
+	
 	/** Third-person view. Superseded by the operator view in Phase 5. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "View")
 	TObjectPtr<class USpringArmComponent> CameraBoom;

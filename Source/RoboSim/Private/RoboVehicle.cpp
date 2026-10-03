@@ -9,6 +9,7 @@
 #include "RoboLidarComponent.h"
 #include "RoboOdometryComponent.h"
 #include "RoboRecorderComponent.h"
+#include "RoboReplayComponent.h"
 #include "RoboSimSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -104,6 +105,7 @@ ARoboVehicle::ARoboVehicle()
 	Imu = CreateDefaultSubobject<URoboImuComponent>(TEXT("Imu"));
 
 	Recorder = CreateDefaultSubobject<URoboRecorderComponent>(TEXT("Recorder"));
+	Replayer = CreateDefaultSubobject<URoboReplayComponent>(TEXT("Replayer"));
 }
 
 void ARoboVehicle::OnConstruction(const FTransform& Transform)
