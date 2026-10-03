@@ -16,7 +16,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+REQUIRED_COLUMNS = frozenset({
+    "time_s", "travelled_m", "pos_error_m", "heading_error_rad",
+    "true_x_m", "true_y_m", "odom_x_m", "odom_y_m", "speed_ms",
+})
 
+
+def read_run(path: Path) -> tuple[pd.DataFrame, dict[str, str]]:
+    # index_col=False stops pandas silently treating a surplus value column as
+    # an index, which is how a malformed header shifts every name one place.
+    frame = pd.read_csv(path, comment="#", index_col=False)
+
+    missing = REQUIRED_COLUMNS - set(frame.columns)
+    if missing:
+        raise SystemExit(
+            f"{path}: missing columns {sorted(missing)}. "
+            "The header and row formats are out of step."
+        )
+
+    return frame, read_metadata(path)
+    
 def read_metadata(path: Path) -> dict[str, str]:
     """Parse the leading '#' comment lines into key=value pairs.
 
@@ -148,7 +167,30 @@ def plot_heading_error(runs: list[tuple[str, pd.DataFrame]], out_dir: Path) -> P
     plt.close(figure)
     return output
 
+def plot_slip(runs: list[tuple[str, pd.DataFrame]], out_dir: Path) -> Path:
+    """Commanded minus measured wheel speed: the part odometry cannot see."""
+    figure, axes = plt.subplots(figsize=(9, 5.5))
 
+    for name, frame in runs:
+        if "meas_wheel_l_ms" not in frame:
+            continue
+        axes.plot(frame["time_s"], frame["cmd_wheel_l_ms"] - frame["meas_wheel_l_ms"],
+                  label=f"{name}: left", linewidth=1.5)
+        axes.plot(frame["time_s"], frame["cmd_wheel_r_ms"] - frame["meas_wheel_r_ms"],
+                  label=f"{name}: right", linewidth=1.5, linestyle="--")
+
+    axes.axhline(0.0, color="grey", linewidth=1)
+    axes.set_xlabel("simulation time (s)")
+    axes.set_ylabel("slip: commanded - measured (m/s)")
+    axes.set_title("Wheel slip")
+    axes.grid(True, alpha=0.3)
+    axes.legend()
+
+    output = out_dir / "wheel_slip.png"
+    figure.savefig(output, dpi=150, bbox_inches="tight")
+    plt.close(figure)
+    return output
+    
 def print_summaries(summaries: list[Summary]) -> None:
     header = f"{'run':<28}{'time s':>9}{'dist m':>9}{'drift m':>9}{'drift %':>9}{'max m':>8}{'odom deg':>10}{'gyro deg':>10}"
     print(header)

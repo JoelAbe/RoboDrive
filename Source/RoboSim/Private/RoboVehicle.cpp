@@ -250,3 +250,10 @@ FQuat ARoboVehicle::GetRotationRos() const
 {
 	return RoboFrames::RotationToRos(GetActorQuat());
 }
+
+FVector2D ARoboVehicle::GetMeasuredWheelSpeeds() const
+{
+	return Wheels.Num() >= 2
+		? FVector2D(Wheels[0]->MeasuredSpeedMS, Wheels[1]->MeasuredSpeedMS)
+		: FVector2D::ZeroVector;
+}

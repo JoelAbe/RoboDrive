@@ -31,6 +31,15 @@ struct FRunSample
 	double GyroHeadingRad = 0.0;
 	double GyroHeadingErrorRad = 0.0;
 
+	/** What the wheels were told to do, m/s at the contact patch. */
+	double CommandedWheelLeftMS = 0.0;
+	double CommandedWheelRightMS = 0.0;
+
+	/** What the ground under each wheel is actually doing, m/s.
+	 *  Commanded minus measured is slip, which is what the encoders cannot see. */
+	double MeasuredWheelLeftMS = 0.0;
+	double MeasuredWheelRightMS = 0.0;
+
 	double SpeedMS = 0.0;
 };
 
@@ -49,7 +58,8 @@ namespace RoboRunRecord
 			TEXT("true_x_m,true_y_m,true_yaw_rad,")
 			TEXT("odom_x_m,odom_y_m,odom_yaw_rad,")
 			TEXT("pos_error_m,heading_error_rad,travelled_m,")
-			TEXT("gyro_heading_rad,gyro_heading_error_rad,speed_ms");
+			TEXT("gyro_heading_rad,gyro_heading_error_rad,speed_ms,")
+			TEXT("cmd_wheel_l_ms,cmd_wheel_r_ms,meas_wheel_l_ms,meas_wheel_r_ms");
 	}
 
 	inline FString Format(const FRunSample& Sample)
@@ -61,13 +71,16 @@ namespace RoboRunRecord
 			TEXT("%.6f,%.6f,%.6f,")
 			TEXT("%.6f,%.6f,%.6f,")
 			TEXT("%.6f,%.6f,%.6f,")
-			TEXT("%.6f,%.6f,%.6f"),
+			TEXT("%.6f,%.6f,%.6f,")
+			TEXT("%.6f,%.6f,%.6f,%.6f"),
 			Sample.TimeSeconds, Sample.Step,
 			Sample.CommandLinearMS, Sample.CommandAngularRadS, Sample.CommandSource,
 			Sample.TrueX, Sample.TrueY, Sample.TrueYawRad,
 			Sample.OdomX, Sample.OdomY, Sample.OdomYawRad,
 			Sample.PositionErrorM, Sample.HeadingErrorRad, Sample.TravelledM,
-			Sample.GyroHeadingRad, Sample.GyroHeadingErrorRad, Sample.SpeedMS);
+			Sample.GyroHeadingRad, Sample.GyroHeadingErrorRad, Sample.SpeedMS,
+			Sample.CommandedWheelLeftMS, Sample.CommandedWheelRightMS,
+			Sample.MeasuredWheelLeftMS, Sample.MeasuredWheelRightMS);
 	}
 
 	/** Column count, used to check the header and rows agree. */

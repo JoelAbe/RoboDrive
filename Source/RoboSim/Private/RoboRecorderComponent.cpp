@@ -177,5 +177,13 @@ FRunSample URoboRecorderComponent::TakeSample(double NowSeconds, int64 Step) con
 		Sample.GyroHeadingErrorRad = Imu->GetGyroHeadingErrorRad();
 	}
 
+	const RoboDiffDrive::FWheelSpeeds Commanded = Vehicle->GetCommandedWheelSpeeds();
+	Sample.CommandedWheelLeftMS = Commanded.Left;
+	Sample.CommandedWheelRightMS = Commanded.Right;
+
+	const FVector2D Measured = Vehicle->GetMeasuredWheelSpeeds();
+	Sample.MeasuredWheelLeftMS = Measured.X;
+	Sample.MeasuredWheelRightMS = Measured.Y;
+	
 	return Sample;
 }

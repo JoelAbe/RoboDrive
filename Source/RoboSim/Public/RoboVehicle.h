@@ -91,6 +91,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Robot")
 	FDriveCommand GetActiveCommand() const { return LastCommand; }
 
+	/** Actual contact-patch speed of the driven wheels, m/s. Differs from
+ *  commanded whenever the wheels are slipping. */
+	UFUNCTION(BlueprintPure, Category = "Robot")
+	FVector2D GetMeasuredWheelSpeeds() const;
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
