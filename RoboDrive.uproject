@@ -10,6 +10,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "RoboApi",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "RoboAutonomy",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
