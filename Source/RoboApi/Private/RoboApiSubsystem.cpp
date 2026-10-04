@@ -5,6 +5,8 @@
 #include "EngineUtils.h"
 #include "RoboApi.h"
 #include "RoboApiSettings.h"
+#include "RoboImuComponent.h"
+#include "RoboOdometryComponent.h"
 #include "RoboSimSubsystem.h"
 #include "RoboVehicle.h"
 #include "Serialization/JsonReader.h"
@@ -113,6 +115,7 @@ void URoboApiSubsystem::Tick(float DeltaTime)
 
 	AcceptPendingClient();
 	ReadFromClient();
+	CompletePendingStep();
 }
 
 void URoboApiSubsystem::AcceptPendingClient()
@@ -128,19 +131,39 @@ void URoboApiSubsystem::AcceptPendingClient()
 	{
 		return;
 	}
-
-	// One client at a time: a second connection replaces the first rather than
-	// queueing, so a crashed client cannot lock the simulation out.
+	
 	if (ClientSocket != nullptr)
 	{
 		UE_LOG(LogRoboApi, Warning, TEXT("Replacing existing API client"));
-		ClientSocket->Close();
-		ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(ClientSocket);
+		CloseClient();
 	}
 
 	ClientSocket = Incoming;
 	ReceiveBuffer.Reset();
 	UE_LOG(LogRoboApi, Log, TEXT("API client connected"));
+}
+
+void URoboApiSubsystem::CloseClient()
+{
+	if (ClientSocket == nullptr)
+	{
+		return;
+	}
+
+	ClientSocket->Close();
+	if (ISocketSubsystem* Sockets = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM))
+	{
+		Sockets->DestroySocket(ClientSocket);
+	}
+	ClientSocket = nullptr;
+	ReceiveBuffer.Reset();
+
+	// A client that disappears mid-step is owed a reply that will never be
+	// sent. Clearing it here stops the next client's first step being answered
+	// instantly with the previous session's target.
+	bStepPending = false;
+
+	UE_LOG(LogRoboApi, Log, TEXT("API client disconnected"));
 }
 
 void URoboApiSubsystem::ReadFromClient()
@@ -159,10 +182,22 @@ void URoboApiSubsystem::ReadFromClient()
 		int32 BytesRead = 0;
 		if (!ClientSocket->Recv(Chunk.GetData(), Chunk.Num(), BytesRead) || BytesRead <= 0)
 		{
-			break;
+			// A failed read on a socket that claimed to have data means the
+			// peer has gone.
+			CloseClient();
+			return;
 		}
 
 		ReceiveBuffer.Append(Chunk.GetData(), BytesRead);
+	}
+
+	// A closed connection reports no pending data at all, so the loop above
+	// would never notice it. The connection state is the other half of the
+	// signal.
+	if (ClientSocket->GetConnectionState() == SCS_ConnectionError)
+	{
+		CloseClient();
+		return;
 	}
 
 	// TCP is a stream, not a sequence of messages: one read may contain half a
@@ -196,16 +231,33 @@ void URoboApiSubsystem::HandleLine(const FString& Line)
 		SendResponse(Response);
 		return;
 	}
+	
+	double RequestId = 0.0;
+	Request->TryGetNumberField(TEXT("id"), RequestId);
+	Response->SetNumberField(TEXT("id"), RequestId);
 
-	// Echoed so a client can match replies to requests.
-	Response->SetNumberField(TEXT("id"), Request->GetNumberField(TEXT("id")));
-
-	const FString Operation = Request->GetStringField(TEXT("op"));
-
+	FString Operation;
+	if (!Request->TryGetStringField(TEXT("op"), Operation))
+	{
+		Response->SetBoolField(TEXT("ok"), false);
+		Response->SetStringField(TEXT("error"), TEXT("missing 'op'"));
+		SendResponse(Response);
+		return;
+	}
+	
 	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
 	FString Error;
+	bool bDeferred = false;
 
-	if (Dispatch(Operation, Request, Result, Error))
+	const bool bSucceeded = Dispatch(Operation, Request, Result, Error, bDeferred);
+
+	if (bSucceeded && bDeferred)
+	{
+		// The reply goes out when the simulation reaches the requested step.
+		return;
+	}
+	
+	if (bSucceeded)
 	{
 		Response->SetBoolField(TEXT("ok"), true);
 		Response->SetObjectField(TEXT("result"), Result);
@@ -220,7 +272,7 @@ void URoboApiSubsystem::HandleLine(const FString& Line)
 }
 
 bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJsonObject>& Request,
-	TSharedRef<FJsonObject>& OutResult, FString& OutError)
+	TSharedRef<FJsonObject>& OutResult, FString& OutError, bool& bOutDeferred)
 {
 	if (Operation == TEXT("ping"))
 	{
@@ -251,6 +303,103 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		return true;
 	}
 
+	if (Operation == TEXT("reset"))
+	{
+		ARoboVehicle* Vehicle = FindVehicle();
+		if (Vehicle == nullptr)
+		{
+			OutError = TEXT("no robot in the world");
+			return false;
+		}
+
+		// Default to where the robot spawned; a scenario can ask for a pose.
+		FVector LocationUU = SpawnLocationUU;
+		FRotator Rotation = SpawnRotation;
+
+		double X = 0.0, Y = 0.0, Yaw = 0.0;
+		if (Request->TryGetNumberField(TEXT("x"), X) && Request->TryGetNumberField(TEXT("y"), Y))
+		{
+			Request->TryGetNumberField(TEXT("yaw"), Yaw);
+			const FVector RequestedUU = RoboFrames::PositionToUe(FVector(X, Y, 0.0));
+			LocationUU = FVector(RequestedUU.X, RequestedUU.Y, SpawnLocationUU.Z);
+			Rotation = FRotator(0.0, RoboFrames::YawToUe(Yaw), 0.0);
+		}
+
+		Vehicle->SetActorLocationAndRotation(LocationUU, Rotation, false, nullptr,
+			ETeleportType::TeleportPhysics);
+
+		if (UPrimitiveComponent* Body = Cast<UPrimitiveComponent>(Vehicle->GetRootComponent()))
+		{
+			Body->SetPhysicsLinearVelocity(FVector::ZeroVector);
+			Body->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+		}
+
+		if (URoboOdometryComponent* Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>())
+		{
+			Odometry->ResetOdometry();
+		}
+
+		if (URoboImuComponent* Imu = Vehicle->FindComponentByClass<URoboImuComponent>())
+		{
+			Imu->ResetImu();
+		}
+
+		// Sim time deliberately keeps running: rewinding it would strand every
+		// sensor that has already scheduled its next sample.
+		OutResult->SetBoolField(TEXT("reset"), true);
+		return true;
+	}
+
+	if (Operation == TEXT("set_command"))
+	{
+		ARoboVehicle* Vehicle = FindVehicle();
+		const URoboSimSubsystem* Sim = GetWorld()->GetSubsystem<URoboSimSubsystem>();
+		if (Vehicle == nullptr || Sim == nullptr)
+		{
+			OutError = TEXT("no robot in the world");
+			return false;
+		}
+
+		FDriveCommand Command;
+		Command.Linear = Request->GetNumberField(TEXT("v"));
+		Command.Angular = Request->GetNumberField(TEXT("w"));
+		Command.TimeSeconds = Sim->GetSimTimeSeconds();
+		Command.Source = EDriveSource::External;
+
+		Vehicle->SubmitDriveCommand(Command);
+
+		OutResult->SetNumberField(TEXT("v"), Command.Linear);
+		OutResult->SetNumberField(TEXT("w"), Command.Angular);
+		return true;
+	}
+
+	if (Operation == TEXT("step"))
+	{
+		const URoboSimSubsystem* Sim = GetWorld()->GetSubsystem<URoboSimSubsystem>();
+		if (Sim == nullptr)
+		{
+			OutError = TEXT("simulation subsystem unavailable");
+			return false;
+		}
+
+		if (bStepPending)
+		{
+			OutError = TEXT("a step is already in progress");
+			return false;
+		}
+
+		double RequestedSteps = 1.0;
+		Request->TryGetNumberField(TEXT("steps"), RequestedSteps);
+
+		StepTargetCount = Sim->GetStepCount() + FMath::Max(1, FMath::RoundToInt(RequestedSteps));
+		double StepId = 0.0;
+		Request->TryGetNumberField(TEXT("id"), StepId);
+		StepRequestId = static_cast<int32>(StepId);
+		bStepPending = true;
+		bOutDeferred = true;
+		return true;
+	}
+
 	OutError = FString::Printf(TEXT("unknown op '%s'"), *Operation);
 	return false;
 }
@@ -273,4 +422,56 @@ void URoboApiSubsystem::SendResponse(const TSharedRef<FJsonObject>& Response)
 	const FTCHARToUTF8 Utf8(*Serialised);
 	int32 BytesSent = 0;
 	ClientSocket->Send(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length(), BytesSent);
+}
+
+ARoboVehicle* URoboApiSubsystem::FindVehicle()
+{
+	if (CachedVehicle.IsValid())
+	{
+		return CachedVehicle.Get();
+	}
+
+	for (TActorIterator<ARoboVehicle> It(GetWorld()); It; ++It)
+	{
+		CachedVehicle = *It;
+
+		// Remember where it started, so reset has somewhere to go back to.
+		if (!bHasSpawnPose)
+		{
+			SpawnLocationUU = It->GetActorLocation();
+			SpawnRotation = It->GetActorRotation();
+			bHasSpawnPose = true;
+		}
+
+		return CachedVehicle.Get();
+	}
+
+	return nullptr;
+}
+
+void URoboApiSubsystem::CompletePendingStep()
+{
+	if (!bStepPending)
+	{
+		return;
+	}
+
+	const URoboSimSubsystem* Sim = GetWorld()->GetSubsystem<URoboSimSubsystem>();
+	if (Sim == nullptr || Sim->GetStepCount() < StepTargetCount)
+	{
+		return;
+	}
+
+	bStepPending = false;
+
+	TSharedRef<FJsonObject> Response = MakeShared<FJsonObject>();
+	Response->SetNumberField(TEXT("id"), StepRequestId);
+	Response->SetBoolField(TEXT("ok"), true);
+
+	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetNumberField(TEXT("sim_time"), Sim->GetSimTimeSeconds());
+	Result->SetNumberField(TEXT("step"), static_cast<double>(Sim->GetStepCount()));
+	Response->SetObjectField(TEXT("result"), Result);
+
+	SendResponse(Response);
 }

@@ -34,6 +34,8 @@ public:
 private:
 	bool StartListening();
 	void StopListening();
+	/** Drop the current client and forget anything owed to it. */
+	void CloseClient();
 
 	void AcceptPendingClient();
 	void ReadFromClient();
@@ -42,7 +44,7 @@ private:
 
 	/** Dispatch one request. Returns false and fills OutError if it failed. */
 	bool Dispatch(const FString& Operation, const TSharedPtr<FJsonObject>& Request,
-		TSharedRef<FJsonObject>& OutResult, FString& OutError);
+		TSharedRef<FJsonObject>& OutResult, FString& OutError, bool& bOutDeferred);
 
 	FSocket* ListenSocket = nullptr;
 	FSocket* ClientSocket = nullptr;
@@ -51,4 +53,22 @@ private:
 	TArray<uint8> ReceiveBuffer;
 
 	int32 BoundPort = 0;
+
+	/** Robot the API drives. Found lazily; the world may not have one yet. */
+	class ARoboVehicle* FindVehicle();
+
+	/** Send the reply to a step request that has now completed. */
+	void CompletePendingStep();
+
+	TWeakObjectPtr<class ARoboVehicle> CachedVehicle;
+
+	/** Pose the robot had when first seen, used as the default reset pose. */
+	FVector SpawnLocationUU = FVector::ZeroVector;
+	FRotator SpawnRotation = FRotator::ZeroRotator;
+	bool bHasSpawnPose = false;
+
+	/** A step request waits for the clock rather than answering immediately. */
+	bool bStepPending = false;
+	int64 StepTargetCount = 0;
+	int32 StepRequestId = 0;
 };
