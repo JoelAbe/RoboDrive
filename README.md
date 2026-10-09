@@ -85,3 +85,8 @@ Config/           project settings (edited through the editor)
 Tools/            scripts
 docs/             roadmap and architecture decision records
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE). Unreal Engine itself is covered by Epic's own
+licence terms, which this project does not alter or redistribute.
