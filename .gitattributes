@@ -1,0 +1,15 @@
+# Normalise line endings for text, so a clone on another OS is not a diff.
+* text=auto
+
+# Unreal binary assets: never diff or merge these as text.
+*.uasset  binary
+*.umap    binary
+*.ubulk   binary
+*.uexp    binary
+
+# Plots and images.
+*.png     binary
+
+# Shell and Python keep LF even on Windows.
+*.sh      text eol=lf
+*.py      text eol=lf
