@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "name": "slalom",
+  "description": "Weave between three posts to a goal 10 m ahead. Tests turning, and gives the lidar something to see on both sides.",
+  "start": { "x": 0.0, "y": 0.0, "yaw": 0.0 },
+  "goal": { "x": 10.0, "y": 0.0, "tolerance_m": 0.5 },
+  "time_limit_s": 60.0,
+  "obstacles": [
+    { "x": 3.0, "y":  0.4, "size": [0.4, 0.4, 1.0] },
+    { "x": 5.5, "y": -0.4, "size": [0.4, 0.4, 1.0] },
+    { "x": 8.0, "y":  0.4, "size": [0.4, 0.4, 1.0] }
+  ]
+}
