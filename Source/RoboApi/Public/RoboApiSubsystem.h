@@ -71,4 +71,20 @@ private:
 	bool bStepPending = false;
 	int64 StepTargetCount = 0;
 	int32 StepRequestId = 0;
+
+	/** Teleport the robot, stop it, and restart its dead reckoning there. */
+	void ResetRobotTo(class ARoboVehicle* Vehicle, const FVector& LocationUU, const FRotator& Rotation);
+
+	/** Build the world a scenario describes. Returns false and fills OutError if it is malformed. */
+	bool LoadScenario(class ARoboVehicle* Vehicle, const TSharedPtr<FJsonObject>& Scenario,
+		TSharedRef<FJsonObject>& OutResult, FString& OutError);
+
+	/** Remove everything the previous scenario spawned. */
+	void ClearScenario();
+
+	/** Height of the floor at a point, Unreal units. Ignores scenario obstacles. */
+	double GroundHeightUU(double XUU, double YUU) const;
+
+	/** Actors the current scenario created, so the next one can remove them. */
+	TArray<TWeakObjectPtr<AActor>> ScenarioActors;
 };
