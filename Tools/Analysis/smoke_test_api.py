@@ -82,7 +82,16 @@ def main() -> None:
             print("rejected  ", error)
 
         print("reset     ", client.call("reset"))
+        
+        # Thin the scan so the printout is readable; a real client would take
+        # every beam.
+        sensors = client.call("get_sensors", lidar_stride=30)
+        print("odometry  ", sensors["odometry"])
+        print("imu accel ", [round(value, 2) for value in sensors["imu"]["accel"]])
+        print("lidar     ", sensors["lidar"]["ranges"])
 
+        print("truth     ", client.call("get_ground_truth")["pose"])
+        
         # Drive at 10 Hz: one command, then 12 steps of 1/120 s, repeated.
         commands_per_second = 10
         steps_per_command = 12

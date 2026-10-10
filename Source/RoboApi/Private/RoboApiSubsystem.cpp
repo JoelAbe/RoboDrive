@@ -6,6 +6,9 @@
 #include "RoboApi.h"
 #include "RoboApiSettings.h"
 #include "RoboImuComponent.h"
+#include "RoboLidar.h"
+#include "RoboLidarComponent.h"
+#include "RoboOdometry.h"
 #include "RoboOdometryComponent.h"
 #include "RoboSimSubsystem.h"
 #include "RoboVehicle.h"
@@ -19,6 +22,26 @@ namespace
 	/** One request or response per line, so framing needs no length prefix. */
 	constexpr uint8 LineTerminator = '\n';
 	constexpr int32 ApiReceiveChunkBytes = 8192;
+
+	/** A planar pose as {x, y, yaw}, REP-103 metres and radians. */
+	TSharedRef<FJsonObject> ApiMakePose(const FPose2D& Pose)
+	{
+		TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+		Object->SetNumberField(TEXT("x"), Pose.X);
+		Object->SetNumberField(TEXT("y"), Pose.Y);
+		Object->SetNumberField(TEXT("yaw"), Pose.YawRad);
+		return Object;
+	}
+
+	/** A vector as a three-element JSON array. */
+	TArray<TSharedPtr<FJsonValue>> ApiMakeVector(const FVector& Vector)
+	{
+		TArray<TSharedPtr<FJsonValue>> Values;
+		Values.Add(MakeShared<FJsonValueNumber>(Vector.X));
+		Values.Add(MakeShared<FJsonValueNumber>(Vector.Y));
+		Values.Add(MakeShared<FJsonValueNumber>(Vector.Z));
+		return Values;
+	}
 }
 
 bool URoboApiSubsystem::DoesSupportWorldType(const EWorldType::Type WorldType) const
@@ -280,24 +303,25 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		return true;
 	}
 
+	const URoboSimSubsystem* Sim = GetWorld()->GetSubsystem<URoboSimSubsystem>();
+	if (Sim == nullptr)
+	{
+		OutError = TEXT("simulation subsystem unavailable");
+		return false;
+	}
+	ARoboVehicle* Vehicle = FindVehicle();
+	
 	if (Operation == TEXT("get_state"))
 	{
-		const URoboSimSubsystem* Sim = GetWorld()->GetSubsystem<URoboSimSubsystem>();
-		if (Sim == nullptr)
-		{
-			OutError = TEXT("simulation subsystem unavailable");
-			return false;
-		}
 
 		OutResult->SetNumberField(TEXT("sim_time"), Sim->GetSimTimeSeconds());
 		OutResult->SetNumberField(TEXT("step"), static_cast<double>(Sim->GetStepCount()));
 		OutResult->SetNumberField(TEXT("real_time_factor"), Sim->GetRealTimeFactor());
 
-		for (TActorIterator<ARoboVehicle> It(GetWorld()); It; ++It)
+		if (Vehicle != nullptr)
 		{
-			OutResult->SetStringField(TEXT("robot"), It->GetName());
-			OutResult->SetNumberField(TEXT("speed_ms"), It->GetSpeedMS());
-			break;
+			OutResult->SetStringField(TEXT("robot"), Vehicle->GetName());
+			OutResult->SetNumberField(TEXT("speed_ms"), Vehicle->GetSpeedMS());
 		}
 
 		return true;
@@ -305,7 +329,6 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 
 	if (Operation == TEXT("reset"))
 	{
-		ARoboVehicle* Vehicle = FindVehicle();
 		if (Vehicle == nullptr)
 		{
 			OutError = TEXT("no robot in the world");
@@ -352,9 +375,7 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 
 	if (Operation == TEXT("set_command"))
 	{
-		ARoboVehicle* Vehicle = FindVehicle();
-		const URoboSimSubsystem* Sim = GetWorld()->GetSubsystem<URoboSimSubsystem>();
-		if (Vehicle == nullptr || Sim == nullptr)
+		if (Vehicle == nullptr)
 		{
 			OutError = TEXT("no robot in the world");
 			return false;
@@ -375,13 +396,6 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 
 	if (Operation == TEXT("step"))
 	{
-		const URoboSimSubsystem* Sim = GetWorld()->GetSubsystem<URoboSimSubsystem>();
-		if (Sim == nullptr)
-		{
-			OutError = TEXT("simulation subsystem unavailable");
-			return false;
-		}
-
 		if (bStepPending)
 		{
 			OutError = TEXT("a step is already in progress");
@@ -400,6 +414,113 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		return true;
 	}
 
+	if (Operation == TEXT("get_sensors"))
+	{
+		if (Vehicle == nullptr)
+		{
+			OutError = TEXT("no robot in the world");
+			return false;
+		}
+
+		OutResult->SetNumberField(TEXT("sim_time"), Sim->GetSimTimeSeconds());
+
+		// Only what the robot could know. Ground truth is a separate operation
+		// so that autonomy cannot reach it by accident.
+		if (const URoboOdometryComponent* Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>())
+		{
+			OutResult->SetObjectField(TEXT("odometry"), ApiMakePose(Odometry->GetEstimatedPose()));
+			OutResult->SetNumberField(TEXT("travelled_m"), Odometry->GetTravelledM());
+		}
+
+		if (const URoboImuComponent* Imu = Vehicle->FindComponentByClass<URoboImuComponent>())
+		{
+			const FImuSample Sample = Imu->GetLatestSample();
+
+			TSharedRef<FJsonObject> ImuObject = MakeShared<FJsonObject>();
+			ImuObject->SetArrayField(TEXT("accel"), ApiMakeVector(Sample.AccelerationMS2));
+			ImuObject->SetArrayField(TEXT("gyro"), ApiMakeVector(Sample.AngularVelocityRadS));
+			ImuObject->SetNumberField(TEXT("time"), Sample.TimeSeconds);
+
+			OutResult->SetObjectField(TEXT("imu"), ImuObject);
+		}
+
+		// Lidar is by far the largest part of a reply, so a client can decline
+		// it or thin it out.
+		bool bIncludeLidar = true;
+		Request->TryGetBoolField(TEXT("include_lidar"), bIncludeLidar);
+
+		double RequestedStride = 1.0;
+		Request->TryGetNumberField(TEXT("lidar_stride"), RequestedStride);
+		const int32 Stride = FMath::Max(1, FMath::RoundToInt(RequestedStride));
+
+		const URoboLidarComponent* Lidar = Vehicle->FindComponentByClass<URoboLidarComponent>();
+		if (bIncludeLidar && Lidar != nullptr)
+		{
+			const FLidarScan& Scan = Lidar->GetLatestScan();
+
+			TArray<TSharedPtr<FJsonValue>> Ranges;
+			Ranges.Reserve(Scan.RangesM.Num() / Stride + 1);
+
+			for (int32 Index = 0; Index < Scan.RangesM.Num(); Index += Stride)
+			{
+				const double RangeM = Scan.RangesM[Index];
+
+				// JSON has no infinity, and "no return" must stay distinct from
+				// "a reading at maximum range". Null is the natural encoding,
+				// and it arrives in Python as None.
+				if (RoboLidar::HasReturn(RangeM))
+				{
+					Ranges.Add(MakeShared<FJsonValueNumber>(RangeM));
+				}
+				else
+				{
+					Ranges.Add(MakeShared<FJsonValueNull>());
+				}
+			}
+
+			TSharedRef<FJsonObject> ScanObject = MakeShared<FJsonObject>();
+			ScanObject->SetNumberField(TEXT("angle_min"), Scan.AngleMinRad);
+
+			// Thinning the beams widens the gap between the ones that remain.
+			// Reporting the original increment would misplace every point.
+			ScanObject->SetNumberField(TEXT("angle_increment"), Scan.AngleIncrementRad * Stride);
+
+			ScanObject->SetNumberField(TEXT("range_min"), Scan.RangeMinM);
+			ScanObject->SetNumberField(TEXT("range_max"), Scan.RangeMaxM);
+			ScanObject->SetNumberField(TEXT("time"), Scan.TimeSeconds);
+			ScanObject->SetArrayField(TEXT("ranges"), Ranges);
+
+			OutResult->SetObjectField(TEXT("lidar"), ScanObject);
+		}
+
+		return true;
+	}
+
+	if (Operation == TEXT("get_ground_truth"))
+	{
+		if (Vehicle == nullptr)
+		{
+			OutError = TEXT("no robot in the world");
+			return false;
+		}
+
+		OutResult->SetNumberField(TEXT("sim_time"), Sim->GetSimTimeSeconds());
+
+		// What the simulation knows and the robot does not. This is the oracle
+		// a test judges against, and the thing autonomy must never read.
+		if (const URoboOdometryComponent* Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>())
+		{
+			OutResult->SetObjectField(TEXT("pose"), ApiMakePose(Odometry->GetTruePose()));
+			OutResult->SetNumberField(TEXT("odometry_error_m"), Odometry->GetPositionErrorM());
+			OutResult->SetNumberField(TEXT("heading_error_rad"), Odometry->GetHeadingErrorRad());
+		}
+
+		OutResult->SetNumberField(TEXT("speed_ms"), Vehicle->GetSpeedMS());
+		OutResult->SetArrayField(TEXT("velocity"), ApiMakeVector(Vehicle->GetLinearVelocityMS()));
+
+		return true;
+	}
+	
 	OutError = FString::Printf(TEXT("unknown op '%s'"), *Operation);
 	return false;
 }
