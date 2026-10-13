@@ -1,0 +1,51 @@
+# Builds the project and runs every test on a self-hosted Windows runner.
+#
+# Deliberately NOT triggered by pull requests. This repository is public, and
+# a pull request workflow on a self-hosted runner would let anyone run code on
+# the runner's machine by opening a PR. Pushes to main need write access, so
+# only the owner can trigger this.
+
+name: Simulation tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # adds a "Run workflow" button on the Actions tab
+
+# If several pushes arrive close together, only test the latest.
+concurrency:
+  group: simulation-tests
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Only runners with all three labels pick this up: the one on your PC.
+    runs-on: [self-hosted, Windows, unreal]
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          # Keep Binaries/ and Intermediate/ between runs. Checkout normally
+          # wipes untracked files, which would force a full rebuild of the
+          # project every time.
+          clean: false
+
+      - name: Build and run unit tests
+        shell: pwsh
+        run: ./Tools/RunTests.ps1
+
+      - name: Run scenarios
+        shell: pwsh
+        run: ./Tools/RunScenarios.ps1
+
+      # Upload the logs whether the run passed or failed, so a red build can
+      # be diagnosed from GitHub without access to the runner.
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: Saved/Logs/*.log
+          if-no-files-found: ignore
