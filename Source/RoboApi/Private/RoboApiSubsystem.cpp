@@ -366,9 +366,17 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 			return false;
 		}
 
+		double Linear = 0.0;
+		double Angular = 0.0;
+		if (!Request->TryGetNumberField(TEXT("v"), Linear) || !Request->TryGetNumberField(TEXT("w"), Angular))
+		{
+			OutError = TEXT("set_command needs both v and w");
+			return false;
+		}
+
 		FDriveCommand Command;
-		Command.Linear = Request->GetNumberField(TEXT("v"));
-		Command.Angular = Request->GetNumberField(TEXT("w"));
+		Command.Linear = Linear;
+		Command.Angular = Angular;
 		Command.TimeSeconds = Sim->GetSimTimeSeconds();
 		Command.Source = EDriveSource::External;
 
