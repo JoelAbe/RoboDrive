@@ -7,7 +7,7 @@ truth as the reference.
 
 Each run was driven by the stub autonomy at 0.5 m/s around a 2 m radius, so
 the path is identical and the only variable is the one named. Runs are
-recorded at 50 Hz to CSV and analysed with `Tools/analysis/analyse_run.py`.
+recorded at 50 Hz to CSV and analysed with `Tools/Analysis/analyse_run.py`.
 
 ## Results
 
@@ -66,7 +66,7 @@ why the next layer of a real robot is localisation rather than better encoders.
 ## Reproducing
 
 ```
-python Tools/analysis/analyse_run.py Saved/RoboDrive/Runs/*.csv --out docs/images
+python Tools/Analysis/analyse_run.py Saved/RoboDrive/Runs/*.csv --out docs/images
 ```
 
 Each CSV carries the settings that produced it in comment lines above the

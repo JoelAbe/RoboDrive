@@ -83,3 +83,4 @@ DerivedDataCache/*
 *.DotSettings.user
 
 *.venv/
+__pycache__/

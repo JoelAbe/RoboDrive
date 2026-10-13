@@ -78,7 +78,7 @@ published formulas be used as written.
 
 Scenarios are JSON files describing a start, obstacles, a goal and a time
 limit. The [scenario format](docs/scenarios.md) explains them, and
-`Tools/analysis/run_scenarios.py` runs every one through the external API and
+`Tools/Analysis/run_scenarios.py` runs every one through the external API and
 reports pass or fail.
 
 ## Layout

@@ -12,7 +12,7 @@ fields.
 
 - **The simulator** builds the world: it places obstacles, moves the robot to
   its start pose and marks the goal. It ignores every other field.
-- **The test harness** (`Tools/analysis/run_scenarios.py`) drives the robot and
+- **The test harness** (`Tools/Analysis/run_scenarios.py`) drives the robot and
   judges the result against ground truth, using the goal and time limit.
 
 Keeping the pass and fail criteria out of the simulator means the rules a test
@@ -86,8 +86,8 @@ chassis, which is 0.4 m wide.
 With the simulation playing:
 
 ```
-python Tools/analysis/load_scenario.py Scenarios/corridor.json
-python Tools/analysis/run_scenarios.py
+python Tools/Analysis/load_scenario.py Scenarios/corridor.json
+python Tools/Analysis/run_scenarios.py
 ```
 
 The first only builds the world, for looking at. The second runs every
