@@ -91,4 +91,7 @@ python Tools/Analysis/run_scenarios.py
 ```
 
 The first only builds the world, for looking at. The second runs every
-scenario and exits non-zero if any fails.
+scenario and exits non-zero if any fails. To run the whole suite headless,
+as CI does, use `./Tools/RunScenarios.ps1`.
+
+The operations these scripts use are described in the [API reference](api.md).

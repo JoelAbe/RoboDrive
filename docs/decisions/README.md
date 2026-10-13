@@ -15,3 +15,5 @@ discussed, so this list stays a description of the project rather than a plan.
 | [0004](0004-raycast-wheel-vehicle-model.md) | Model the vehicle with raycast wheels and casters | Accepted |
 | [0005](0005-arbitration-by-priority-and-freshness.md) | Arbitrate drive commands by priority and freshness | Accepted |
 | [0006](0006-physics-on-the-actor-tick.md) | Keep physics forces on the actor tick | Accepted |
+| [0007](0007-external-api-module.md) | Expose the simulation through a TCP API in its own module | Accepted |
+| [0008](0008-scenarios-as-data.md) | Define scenarios as JSON, judged by the test harness | Accepted |

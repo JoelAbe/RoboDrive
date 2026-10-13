@@ -9,7 +9,7 @@ phase is not done until its tests and documentation exist.
 | 1 | Vehicle, differential-drive kinematics, control arbitration | Done |
 | 2 | Sensors, odometry, deterministic time, record and replay | Done |
 | 3 | External simulation API and data-driven scenarios | Done |
-| 4 | In-engine autonomy, judged by the scenario suite | Not started |
+| 4 | In-engine autonomy, judged by the scenario suite | In progress |
 | 5 | Operator view | Not started |
 | 6 | ROS 2 adapter (software-in-the-loop) | Not started |
 
@@ -43,7 +43,12 @@ and true pose visualised, record and replay, a profiling pass on sensor cost,
 and Python analysis of recorded drift.
 
 **Done when:** drift is visible in-engine and quantified in a plot, and a
-recorded run replays identically.
+recorded run can be replayed.
+
+Replay was planned to be identical. It was measured instead: a replayed run
+diverged by at most 0.033 m over 25 m travelled, which is well inside any
+scenario tolerance, so bit-identical replay was not pursued
+([ADR 0006](decisions/0006-physics-on-the-actor-tick.md)).
 
 ## Phase 3: External API and scenarios
 

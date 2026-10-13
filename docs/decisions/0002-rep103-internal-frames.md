@@ -40,3 +40,6 @@ drawing — through `Source/RoboSim/Public/RoboFrames.h`.
   against hand-derived values.
 - Values shown in the editor's Details panel use Unreal's convention and need
   converting mentally when debugging.
+
+*Note: the rotation and angular velocity conversions deferred above were
+implemented in Phase 2 alongside the IMU.*

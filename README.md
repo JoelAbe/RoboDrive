@@ -4,14 +4,14 @@
 
 A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
-configurable noise, and a test harness that runs without the editor.
+configurable noise, an external API, and a scenario test suite that runs in CI.
 
-> **Status:** Phase 3 complete. The robot drives from velocity commands
-> through real differential drive kinematics on Chaos physics, carries wheel
-> encoders, an IMU, a lidar and a camera on a simulated clock, and estimates
-> its own pose by dead reckoning. An external TCP API lets any client drive
-> and observe it, scenarios are defined as JSON, and every push runs the full
-> scenario suite in CI. Next is in-engine autonomy.
+> **Status:** Phase 3 complete, Phase 4 in progress. The robot drives from
+> velocity commands through real differential drive kinematics on Chaos
+> physics, carries wheel encoders, an IMU, a lidar and a camera on a simulated
+> clock, and estimates its own pose by dead reckoning. An external TCP API lets
+> any client drive and observe it, scenarios are defined as JSON, and every
+> push runs the full scenario suite in CI. Phase 4 adds in-engine autonomy.
 > See the [roadmap](docs/roadmap.md).
 
 ## Requirements
@@ -19,6 +19,9 @@ configurable noise, and a test harness that runs without the editor.
 - Unreal Engine 5.8
 - Windows, with Visual Studio 2022 ("Game development with C++") or JetBrains Rider
 - PowerShell 7, for the scripts in `Tools/`
+- Python 3.10 or newer. The API client and scenario harness use only the
+  standard library; the run analysis also needs `pandas` and `matplotlib`
+  (`pip install -r Tools/Analysis/requirements.txt`).
 
 ## Build
 
@@ -28,6 +31,13 @@ Rider can open `RoboDrive.uproject` directly.
 
 ## Tests
 
+There are two layers of tests, and CI runs both.
+
+**Unit tests** are C++ automation tests covering the maths that does not need a
+running world: frame conversions, kinematics, suspension and traction, the
+arbiter, the clock, odometry, the encoder, noise, the IMU, lidar geometry and
+the run file format.
+
 ```powershell
 ./Tools/RunTests.ps1                                    # build, then run all tests
 ./Tools/RunTests.ps1 -SkipBuild                         # use the existing build
@@ -35,40 +45,82 @@ Rider can open `RoboDrive.uproject` directly.
 ```
 
 Close the editor first; the build step cannot run while Live Coding is active.
-The script exits non-zero if any test fails, or if no tests match the filter —
-a filter that matches nothing is treated as a failure rather than a pass.
+A filter that matches no tests is treated as a failure rather than a pass.
+Inside the editor, the same tests are under **Tools → Test Automation**.
 
-Inside the editor, the same tests are under **Tools → Test Automation**, listed
-under `RoboDrive`.
+**Scenario tests** launch the simulation headless and drive the robot through
+every scenario in `Scenarios/` via the external API, judging each against
+ground truth.
+
+```powershell
+./Tools/RunScenarios.ps1
+```
+
+Both scripts exit 0 on success and 1 on failure. Every push to `main` runs
+both in [continuous integration](docs/ci.md).
 
 ## Architecture
 
-The C++ code is split into three modules. An arrow means "depends on":
+The C++ code is split into four modules. An arrow means "depends on":
 
 ```mermaid
 flowchart LR
     RoboDrive --> RoboAutonomy
     RoboDrive --> RoboSim
     RoboAutonomy --> RoboSim
+    RoboApi --> RoboSim
 ```
 
 | Module | Responsibility |
 |---|---|
-| `RoboSim` | The simulation: vehicle, sensors, odometry. Knows nothing about what is driving it. |
+| `RoboSim` | The simulation: vehicle, sensors, odometry, clock, recording and replay. Knows nothing about what is driving it. |
 | `RoboAutonomy` | The in-engine brain: reads sensor data, produces drive commands. |
-| `RoboDrive` | The game module: connects a brain to a robot, and handles input and UI. |
+| `RoboApi` | The external API: a TCP server through which any client can drive and observe the simulation. |
+| `RoboDrive` | The game module: keyboard input, game mode and operator view. |
 
-The build enforces that direction — `RoboSim` cannot include headers from the
-other two — which keeps the simulation independent of whatever drives it,
+The build enforces that direction. `RoboSim` cannot include headers from any of
+the other three, which keeps the simulation independent of whatever drives it,
 whether that is a keyboard, an in-engine controller, a test script or an
 external ROS 2 stack.
-([ADR 0001](docs/decisions/0001-three-module-split.md))
+([ADR 0001](docs/decisions/0001-three-module-split.md),
+[ADR 0007](docs/decisions/0007-external-api-module.md))
+
+Every command source goes through one arbiter, which picks the highest-priority
+source with a fresh command and stops the robot if none is fresh. Manual input
+always wins, and a source that stops sending stops driving.
+([ADR 0005](docs/decisions/0005-arbitration-by-priority-and-freshness.md))
 
 The robotics code works in ROS REP-103 conventions: metres, radians, and +Y to
 the left. Unreal's centimetres and +Y-right frame appear only at the boundary,
 in [`RoboFrames.h`](Source/RoboSim/Public/RoboFrames.h). This is what lets
 published formulas be used as written.
 ([ADR 0002](docs/decisions/0002-rep103-internal-frames.md))
+
+All design decisions are recorded in [docs/decisions](docs/decisions/README.md).
+
+## External API
+
+While the simulation is playing it listens on `127.0.0.1:8765` for
+newline-delimited JSON. A client can load a scenario, send drive commands,
+advance the simulation, and read sensors and ground truth separately. The
+[API reference](docs/api.md) lists every operation.
+
+```python
+from robodrive_client import SimClient
+
+with SimClient() as client:
+    client.call("reset")
+    client.call("set_command", v=0.5, w=0.0)
+    client.call("step", steps=12)
+    print(client.call("get_sensors", include_lidar=False))
+```
+
+## Scenarios
+
+Scenarios are JSON files describing a start, obstacles, a goal and a time
+limit, written without Unreal and reviewable in a diff. The
+[scenario format](docs/scenarios.md) explains them.
+([ADR 0008](docs/decisions/0008-scenarios-as-data.md))
 
 ## Measurements
 
@@ -77,24 +129,23 @@ published formulas be used as written.
 - [Lidar profiling](docs/profiling-lidar.md) — sensor cost against ray count,
   and the measured real-time ceiling.
 
-## Testing against scenarios
-
-Scenarios are JSON files describing a start, obstacles, a goal and a time
-limit. The [scenario format](docs/scenarios.md) explains them, and
-`Tools/Analysis/run_scenarios.py` runs every one through the external API and
-reports pass or fail. Every push to `main` runs the suite in
-[continuous integration](docs/ci.md).
-
 ## Layout
 
 ```
 Source/
-  RoboSim/        simulation layer
-  RoboAutonomy/   in-engine autonomy
-  RoboDrive/      game module
-Config/           project settings (edited through the editor)
-Tools/            scripts
-docs/             roadmap and architecture decision records
+  RoboSim/            simulation layer
+  RoboAutonomy/       in-engine autonomy
+  RoboApi/            external TCP API
+  RoboDrive/          game module
+Content/              level, Blueprints and input assets
+Config/               project settings (edited through the editor)
+Scenarios/            scenario files for the test suite
+Tools/
+  RunTests.ps1        build and run the unit tests
+  RunScenarios.ps1    run the scenario suite headless
+  Analysis/           Python: API client, scenario harness, run analysis
+docs/                 roadmap, references, measurements and decision records
+.github/workflows/    CI
 ```
 
 ## License
