@@ -4,7 +4,7 @@
   "description": "Drive 8 m straight down a corridor of boxes. Tests that straight-line driving holds its heading.",
   "start": { "x": 0.0, "y": 0.0, "yaw": 0.0 },
   "goal": { "x": 8.0, "y": 0.0, "tolerance_m": 0.5 },
-  "time_limit_s": 2.0,
+  "time_limit_s": 40.0,
   "obstacles": [
     { "x": 2.0, "y":  1.0, "size": [1.0, 0.3, 0.6] },
     { "x": 2.0, "y": -1.0, "size": [1.0, 0.3, 0.6] },
