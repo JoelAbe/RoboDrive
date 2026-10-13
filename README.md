@@ -74,6 +74,13 @@ published formulas be used as written.
 - [Lidar profiling](docs/profiling-lidar.md) — sensor cost against ray count,
   and the measured real-time ceiling.
 
+## Testing against scenarios
+
+Scenarios are JSON files describing a start, obstacles, a goal and a time
+limit. The [scenario format](docs/scenarios.md) explains them, and
+`Tools/analysis/run_scenarios.py` runs every one through the external API and
+reports pass or fail.
+
 ## Layout
 
 ```
