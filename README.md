@@ -1,14 +1,17 @@
 # RoboDrive
 
+[![Simulation tests](https://github.com/JoelAbe/RoboDrive/actions/workflows/simulation-tests.yml/badge.svg)](https://github.com/JoelAbe/RoboDrive/actions/workflows/simulation-tests.yml)
+
 A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, and a test harness that runs without the editor.
 
-> **Status:** Phase 2 complete. The robot drives from velocity commands
+> **Status:** Phase 3 complete. The robot drives from velocity commands
 > through real differential drive kinematics on Chaos physics, carries wheel
 > encoders, an IMU, a lidar and a camera on a simulated clock, and estimates
-> its own pose by dead reckoning. Runs are recorded to CSV, replayed, and
-> analysed in Python. Next is an external API and data-driven scenarios.
+> its own pose by dead reckoning. An external TCP API lets any client drive
+> and observe it, scenarios are defined as JSON, and every push runs the full
+> scenario suite in CI. Next is in-engine autonomy.
 > See the [roadmap](docs/roadmap.md).
 
 ## Requirements
@@ -79,7 +82,8 @@ published formulas be used as written.
 Scenarios are JSON files describing a start, obstacles, a goal and a time
 limit. The [scenario format](docs/scenarios.md) explains them, and
 `Tools/Analysis/run_scenarios.py` runs every one through the external API and
-reports pass or fail.
+reports pass or fail. Every push to `main` runs the suite in
+[continuous integration](docs/ci.md).
 
 ## Layout
 

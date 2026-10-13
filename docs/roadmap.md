@@ -8,7 +8,7 @@ phase is not done until its tests and documentation exist.
 | 0 | Foundations: module structure, coordinate frames, test runner | Done |
 | 1 | Vehicle, differential-drive kinematics, control arbitration | Done |
 | 2 | Sensors, odometry, deterministic time, record and replay | Done |
-| 3 | External simulation API and data-driven scenarios | In progress |
+| 3 | External simulation API and data-driven scenarios | Done |
 | 4 | In-engine autonomy, judged by the scenario suite | Not started |
 | 5 | Operator view | Not started |
 | 6 | ROS 2 adapter (software-in-the-loop) | Not started |
@@ -47,9 +47,13 @@ recorded run replays identically.
 
 ## Phase 3: External API and scenarios
 
-A transport-neutral simulation API over a socket, a Python client, and
-scenarios defined as data: layout, goal, sensor configuration, weather, and
-pass/fail criteria. Scenario regression tests are written as Python clients.
+A simulation API over a TCP socket with newline-delimited JSON, a Python
+client, and scenarios defined as data: start pose, obstacles, goal and time
+limit. Scenario regression tests are written as Python clients and run in CI
+on a self-hosted runner.
+
+Weather and per-scenario sensor configuration were planned here and moved to
+Phase 4, where the fog failure case is the only thing that needs them.
 
 **Done when:** a Python script loads a scenario, steps it, drives the robot and
 returns pass or fail, with no Unreal knowledge required.
@@ -57,7 +61,8 @@ returns pass or fail, with no Unreal knowledge required.
 ## Phase 4: In-engine autonomy
 
 Goal seeking with lidar-based obstacle avoidance, evaluated by the Phase 3
-scenario suite.
+scenario suite. Scenarios gain a visibility setting that degrades the lidar,
+so autonomy can be shown failing for a documented, physical reason.
 
 **Done when:** the autonomy passes a set of scenarios, including a documented
 failure case in fog.
