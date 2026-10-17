@@ -27,6 +27,7 @@ def main() -> None:
     with SimClient(args.host, args.port) as client:
         result = client.call("load_scenario", scenario=scenario)
         print(f"loaded '{result['name']}' with {result['obstacles']} obstacles")
+        print("mission ", client.call("get_state").get("mission"))
 
 
 if __name__ == "__main__":

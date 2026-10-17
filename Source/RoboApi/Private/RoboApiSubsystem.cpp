@@ -12,6 +12,7 @@
 #include "RoboOdometryComponent.h"
 #include "RoboSimSubsystem.h"
 #include "RoboVehicle.h"
+#include "RoboMission.h"
 #include "DrawDebugHelpers.h"
 #include "RoboObstacle.h"
 #include "Serialization/JsonReader.h"
@@ -35,6 +36,22 @@ namespace
 		return Object;
 	}
 
+	/**
+	 * Wire names for mission statuses. Spelled out rather than taken from the
+	 * enum's display names, because these strings are part of the API contract:
+	 * renaming the C++ enum must not silently change what clients receive.
+	 */
+	const TCHAR* ApiMissionStatusName(EMissionStatus Status)
+	{
+		switch (Status)
+		{
+		case EMissionStatus::Active:	return TEXT("active");
+		case EMissionStatus::Arrived:	return TEXT("arrived");
+		case EMissionStatus::Failed:	return TEXT("failed");
+		default:						return TEXT("none");
+		}
+	}
+	
 	/** A vector as a three-element JSON array. */
 	TArray<TSharedPtr<FJsonValue>> ApiMakeVector(const FVector& Vector)
 	{
@@ -312,6 +329,7 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		return false;
 	}
 	ARoboVehicle* Vehicle = FindVehicle();
+	URoboMissionSubsystem* Mission = GetWorld()->GetSubsystem<URoboMissionSubsystem>();
 	
 	if (Operation == TEXT("get_state"))
 	{
@@ -326,6 +344,25 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 			OutResult->SetNumberField(TEXT("speed_ms"), Vehicle->GetSpeedMS());
 		}
 
+		if (Mission != nullptr)
+		{
+			TSharedRef<FJsonObject> MissionObject = MakeShared<FJsonObject>();
+			MissionObject->SetStringField(TEXT("status"), ApiMissionStatusName(Mission->GetStatus()));
+
+			if (Mission->HasGoal())
+			{
+				const FMissionGoal Goal = Mission->GetGoal();
+
+				TSharedRef<FJsonObject> GoalObject = MakeShared<FJsonObject>();
+				GoalObject->SetNumberField(TEXT("x"), Goal.X);
+				GoalObject->SetNumberField(TEXT("y"), Goal.Y);
+				GoalObject->SetNumberField(TEXT("tolerance_m"), Goal.ToleranceM);
+				MissionObject->SetObjectField(TEXT("goal"), GoalObject);
+			}
+
+			OutResult->SetObjectField(TEXT("mission"), MissionObject);
+		}
+		
 		return true;
 	}
 
@@ -530,6 +567,44 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		}
 
 		return LoadScenario(Vehicle, *Scenario, OutResult, OutError);
+	}
+
+	if (Operation == TEXT("set_goal"))
+	{
+		if (Mission == nullptr)
+		{
+			OutError = TEXT("mission subsystem unavailable");
+			return false;
+		}
+
+		FMissionGoal Goal;
+		if (!Request->TryGetNumberField(TEXT("x"), Goal.X) || !Request->TryGetNumberField(TEXT("y"), Goal.Y))
+		{
+			OutError = TEXT("set_goal needs x and y");
+			return false;
+		}
+
+		Request->TryGetNumberField(TEXT("tolerance_m"), Goal.ToleranceM);
+		if (Goal.ToleranceM <= 0.0)
+		{
+			OutError = TEXT("tolerance_m must be positive");
+			return false;
+		}
+
+		Mission->SetGoal(Goal);
+		OutResult->SetStringField(TEXT("status"), ApiMissionStatusName(Mission->GetStatus()));
+		return true;
+	}
+
+	if (Operation == TEXT("clear_goal"))
+	{
+		if (Mission != nullptr)
+		{
+			Mission->ClearGoal();
+		}
+
+		OutResult->SetStringField(TEXT("status"), TEXT("none"));
+		return true;
 	}
 	
 	OutError = FString::Printf(TEXT("unknown op '%s'"), *Operation);
@@ -771,6 +846,20 @@ bool URoboApiSubsystem::LoadScenario(ARoboVehicle* Vehicle, const TSharedPtr<FJs
 			FVector(GoalUU.X, GoalUU.Y, GroundZ),
 			FVector(GoalUU.X, GoalUU.Y, GroundZ + 50.0),
 			ToleranceM * RoboFrames::UUPerMeter, 32, FColor::Green, true, -1.0f, 0, 2.0f);
+
+		if (URoboMissionSubsystem* Mission = GetWorld()->GetSubsystem<URoboMissionSubsystem>())
+		{
+			FMissionGoal MissionGoal;
+			MissionGoal.X = GoalX;
+			MissionGoal.Y = GoalY;
+			MissionGoal.ToleranceM = ToleranceM;
+			Mission->SetGoal(MissionGoal);
+		}
+	}
+	else if (URoboMissionSubsystem* Mission = GetWorld()->GetSubsystem<URoboMissionSubsystem>())
+	{
+		// A scenario without a goal must not inherit the previous scenario's.
+		Mission->ClearGoal();
 	}
 
 	FString Name = TEXT("unnamed");
