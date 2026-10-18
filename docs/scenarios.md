@@ -55,6 +55,7 @@ counter-clockwise. The origin is the world origin of the level.
 | `obstacles` | simulator | no | Boxes to place. Each needs `x`, `y` and a three-element `size` in metres (length, width, height); `yaw` is optional. Boxes sit on the floor. |
 | `goal` | harness, drawn by simulator | yes for the harness | Target position and `tolerance_m`, the radius within which the robot counts as having arrived. |
 | `time_limit_s` | harness | no | Simulation seconds allowed. Defaults to 60. |
+| `visibility_m` | simulator | no | Fog, as meteorological visibility in metres. Absent means clear air. See below. |
 | `known_failure` | harness | no | A reason this scenario is expected to fail today. See below. |
 
 ## Known failures
@@ -71,6 +72,26 @@ The harness reports such a scenario as `XFAIL` when it fails, and does not
 count it as a failure. If it unexpectedly *passes*, it is reported as `XPASS`
 and **does** fail the run: the capability now exists, so the marker should be
 removed and the scenario should start protecting it.
+
+## Fog
+
+`visibility_m` is the distance at which a dark object can no longer be made
+out, as a weather report gives it. Fog affects only the lidar, in two ways:
+
+- **Range loss.** Fog scatters light on the way out and back, so returns from
+  distant surfaces become too weak to detect. At 10 m visibility the 12 m lidar
+  sees about 3.3 m.
+- **Clutter.** Some scattered light comes straight back, so the lidar reports
+  returns from the fog itself. How readily it does so is a property of the
+  sensor, the lidar's **Fog Echo Fraction**.
+
+The level does not look foggy: nothing here changes rendering. In play, fog
+echoes are drawn in cyan and returns from real surfaces in orange. The brain
+receives both as identical ranges, since a real sensor cannot tell them apart.
+
+`slalom_fog` is the slalom with 10 m visibility and nothing else changed. It is
+a known failure: avoidance treats fog echoes as obstacles and steers around the
+fog itself.
 
 ## What a pass does not check
 

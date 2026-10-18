@@ -67,6 +67,7 @@ Result: `{"pong": "RoboDrive"}`
 | `speed_ms` | Robot speed, m/s |
 | `mission.status` | `none`, `active`, `arrived` or `failed` |
 | `mission.goal` | The current goal, `{x, y, tolerance_m}`, present only when one is set |
+| `visibility_m` | Fog visibility, m, or `null` in clear air |
 
 `arrived` means whatever is driving **believes** it has reached the goal. It is
 a claim, not a verdict: a test should still check `get_ground_truth`.
@@ -198,6 +199,9 @@ If the scenario has a goal, it becomes the mission goal and the mission becomes
 `active`. If it has none, any previous goal is cleared, so a scenario never
 inherits another's goal.
 
+The same holds for the weather: a scenario with `visibility_m` sets fog, and
+one without it clears the air.
+
 ### `set_goal`
 
 Gives the robot somewhere to go. The mission becomes `active`.
@@ -240,6 +244,7 @@ stays open.
 | `missing or unsupported schema_version (expected 1)` | The scenario is for a different format version |
 | `scenario has no 'start'` | The scenario has no start pose |
 | `obstacle N needs x, y and a three-element size` | An obstacle is malformed |
+| `visibility_m must be a positive number` | A scenario's visibility was zero, negative or not a number |
 
 ## Python client
 
