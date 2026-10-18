@@ -65,6 +65,11 @@ Result: `{"pong": "RoboDrive"}`
 | `real_time_factor` | Simulated seconds per real second; below 1 means the simulation is running slow |
 | `robot` | Name of the robot actor, if there is one |
 | `speed_ms` | Robot speed, m/s |
+| `mission.status` | `none`, `active`, `arrived` or `failed` |
+| `mission.goal` | The current goal, `{x, y, tolerance_m}`, present only when one is set |
+
+`arrived` means whatever is driving **believes** it has reached the goal. It is
+a claim, not a verdict: a test should still check `get_ground_truth`.
 
 ### `reset`
 
@@ -189,6 +194,31 @@ to the client's filesystem. The whole scenario is validated before anything
 changes; a malformed one is refused and the previous world is left standing.
 The format is described in [scenarios.md](scenarios.md).
 
+If the scenario has a goal, it becomes the mission goal and the mission becomes
+`active`. If it has none, any previous goal is cleared, so a scenario never
+inherits another's goal.
+
+### `set_goal`
+
+Gives the robot somewhere to go. The mission becomes `active`.
+
+| Request field | Required | Meaning |
+|---|---|---|
+| `x`, `y` | yes | Goal position |
+| `tolerance_m` | no | Radius within which the robot counts as arrived. Defaults to 0.5; must be positive. |
+
+Result: `{"status": "active"}`
+
+The goal belongs to the mission rather than to any particular brain, so the
+in-engine autonomy and an external client can execute the same goal on equal
+terms.
+
+### `clear_goal`
+
+Withdraws the goal. The mission returns to `none`.
+
+Result: `{"status": "none"}`
+
 ## Errors
 
 Errors are reported as `"ok": false` with an `error` string. The connection
@@ -200,8 +230,12 @@ stays open.
 | `missing 'op'` | The request had no operation name |
 | `unknown op '...'` | No such operation |
 | `simulation subsystem unavailable` | The world is not running a simulation |
+| `mission subsystem unavailable` | The world has no mission subsystem |
 | `no robot in the world` | The operation needs a robot and there is none |
 | `a step is already in progress` | A second `step` arrived before the first completed |
+| `set_command needs both v and w` | A drive command was missing a velocity |
+| `set_goal needs x and y` | A goal was missing a coordinate |
+| `tolerance_m must be positive` | A goal tolerance of zero or less, which could never be reached |
 | `load_scenario needs a 'scenario' object` | No scenario was sent |
 | `missing or unsupported schema_version (expected 1)` | The scenario is for a different format version |
 | `scenario has no 'start'` | The scenario has no start pose |

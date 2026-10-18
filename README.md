@@ -85,6 +85,30 @@ external ROS 2 stack.
 ([ADR 0001](docs/decisions/0001-three-module-split.md),
 [ADR 0007](docs/decisions/0007-external-api-module.md))
 
+That diagram shows who is allowed to *know about* whom. Data travels
+differently. `RoboApi` and `RoboAutonomy` never reference each other, yet a goal
+sent through the API reaches the in-engine brain, because both meet at shared
+points inside `RoboSim`: the **mission**, which holds the current goal, and the
+**arbiter**, which every command source submits to.
+
+```mermaid
+flowchart LR
+    Keyboard -- "Manual" --> Arbiter
+    Client["External client<br/>via RoboApi"] -- "External" --> Arbiter
+    Client -- "set_goal" --> Mission
+    Mission -- "goal" --> Brain["In-engine brain<br/>RoboAutonomy"]
+    Brain -- "status" --> Mission
+    Brain -- "Autonomy" --> Arbiter
+    Arbiter --> Vehicle["Vehicle<br/>RoboSim"]
+```
+
+The API is a door for brains outside the engine, a peer of the in-engine
+autonomy rather than a layer in front of it. Neither needs to know the other
+exists, much as ROS nodes share a topic without referencing each other.
+Brains are handed a snapshot of the robot's sensors rather than the robot
+itself, so they have no route to ground truth.
+([ADR 0009](docs/decisions/0009-brains-receive-a-snapshot.md))
+
 Every command source goes through one arbiter, which picks the highest-priority
 source with a fresh command and stops the robot if none is fresh. Manual input
 always wins, and a source that stops sending stops driving.
