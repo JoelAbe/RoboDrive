@@ -362,6 +362,20 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 
 			OutResult->SetObjectField(TEXT("mission"), MissionObject);
 		}
+
+		// Null in clear air rather than absent, so a client can tell "clear"
+		// apart from "a simulator too old to report weather".
+		if (const URoboWeatherSubsystem* Weather = GetWorld()->GetSubsystem<URoboWeatherSubsystem>())
+		{
+			if (Weather->HasFog())
+			{
+				OutResult->SetNumberField(TEXT("visibility_m"), Weather->GetVisibilityM());
+			}
+			else
+			{
+				OutResult->SetField(TEXT("visibility_m"), MakeShared<FJsonValueNull>());
+			}
+		}
 		
 		return true;
 	}
@@ -777,6 +791,18 @@ bool URoboApiSubsystem::LoadScenario(ARoboVehicle* Vehicle, const TSharedPtr<FJs
 		}
 	}
 
+	// Visibility is optional, and absent means clear air. If present it must be
+	// a positive number: zero or negative visibility has no physical meaning.
+	double VisibilityM = 0.0;
+	const bool bHasVisibility = Scenario->HasField(TEXT("visibility_m"));
+
+	if (bHasVisibility
+		&& (!Scenario->TryGetNumberField(TEXT("visibility_m"), VisibilityM) || VisibilityM <= 0.0))
+	{
+		OutError = TEXT("visibility_m must be a positive number");
+		return false;
+	}
+	
 	ClearScenario();
 
 	// Obstacles. Positions and sizes are REP-103 metres, converted at this
@@ -862,6 +888,20 @@ bool URoboApiSubsystem::LoadScenario(ARoboVehicle* Vehicle, const TSharedPtr<FJs
 		Mission->ClearGoal();
 	}
 
+	// A scenario without fog must not inherit the previous one's, exactly as
+	// with the goal.
+	if (URoboWeatherSubsystem* Weather = GetWorld()->GetSubsystem<URoboWeatherSubsystem>())
+	{
+		if (bHasVisibility)
+		{
+			Weather->SetFog(VisibilityM);
+		}
+		else
+		{
+			Weather->SetClear();
+		}
+	}
+	
 	FString Name = TEXT("unnamed");
 	Scenario->TryGetStringField(TEXT("name"), Name);
 

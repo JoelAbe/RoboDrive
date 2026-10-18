@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "RoboWeather.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "RoboApiSubsystem.generated.h"
 
