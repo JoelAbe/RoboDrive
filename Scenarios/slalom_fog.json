@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "name": "slalom_fog",
+  "description": "The slalom in dense fog, 10 m visibility. Identical to the slalom in every other way, so any difference in outcome is the fog's doing.",
+  "start": { "x": 0.0, "y": 0.0, "yaw": 0.0 },
+  "goal": { "x": 10.0, "y": 0.0, "tolerance_m": 0.5 },
+  "time_limit_s": 60.0,
+  "visibility_m": 10.0,
+  "known_failure": "Fog reflects some lidar beams back from close range, and avoidance treats every return as an obstacle, so the robot steers around the fog itself. Needs clutter filtering in the avoidance.",
+  "obstacles": [
+    { "x": 3.0, "y":  0.15, "size": [0.4, 0.4, 1.0] },
+    { "x": 5.5, "y": -0.15, "size": [0.4, 0.4, 1.0] },
+    { "x": 8.0, "y":  0.15, "size": [0.4, 0.4, 1.0] }
+  ]
+}
