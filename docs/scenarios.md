@@ -72,6 +72,17 @@ count it as a failure. If it unexpectedly *passes*, it is reported as `XPASS`
 and **does** fail the run: the capability now exists, so the marker should be
 removed and the scenario should start protecting it.
 
+## What a pass does not check
+
+A scenario passes if the robot ends within the goal tolerance, by ground truth,
+inside the time limit. **It does not check whether the robot touched anything
+on the way.** A robot that scraped a post and carried on would still pass.
+Detecting that needs collision events reported through the API and a
+criterion in the scenario format, neither of which exists yet.
+
+Nor does it check the route. The slalom is passed by reaching the goal, whether
+the robot weaves between the posts or goes round all of them on one side.
+
 ## Validation
 
 The simulator checks the whole scenario before changing anything. A malformed

@@ -11,8 +11,9 @@ configurable noise, an external API, and a scenario test suite that runs in CI.
 > physics, carries wheel encoders, an IMU, a lidar and a camera on a simulated
 > clock, and estimates its own pose by dead reckoning. An external TCP API lets
 > any client drive and observe it, scenarios are defined as JSON, and every
-> push runs the full scenario suite in CI. Phase 4 adds in-engine autonomy.
-> See the [roadmap](docs/roadmap.md).
+> push runs the full scenario suite in CI. In Phase 4 the robot now drives
+> itself to a goal and steers around obstacles its lidar sees; fog that
+> degrades the lidar comes next. See the [roadmap](docs/roadmap.md).
 
 ## Requirements
 
@@ -35,8 +36,8 @@ There are two layers of tests, and CI runs both.
 
 **Unit tests** are C++ automation tests covering the maths that does not need a
 running world: frame conversions, kinematics, suspension and traction, the
-arbiter, the clock, odometry, the encoder, noise, the IMU, lidar geometry and
-the run file format.
+arbiter, the clock, odometry, the encoder, noise, the IMU, lidar geometry, the
+run file format, the brains and obstacle avoidance.
 
 ```powershell
 ./Tools/RunTests.ps1                                    # build, then run all tests
@@ -74,7 +75,7 @@ flowchart LR
 | Module | Responsibility |
 |---|---|
 | `RoboSim` | The simulation: vehicle, sensors, odometry, clock, recording and replay. Knows nothing about what is driving it. |
-| `RoboAutonomy` | The in-engine brain: reads sensor data, produces drive commands. |
+| `RoboAutonomy` | The in-engine brains, go-to-goal and lidar obstacle avoidance: read a sensor snapshot, produce drive commands. |
 | `RoboApi` | The external API: a TCP server through which any client can drive and observe the simulation. |
 | `RoboDrive` | The game module: keyboard input, game mode and operator view. |
 
@@ -108,6 +109,11 @@ exists, much as ROS nodes share a topic without referencing each other.
 Brains are handed a snapshot of the robot's sensors rather than the robot
 itself, so they have no route to ground truth.
 ([ADR 0009](docs/decisions/0009-brains-receive-a-snapshot.md))
+
+The default brain steers around obstacles by searching each lidar scan for the
+clear heading closest to the goal, and reports the mission failed, rather than
+pretending to arrive, when it is boxed in.
+([ADR 0010](docs/decisions/0010-reactive-obstacle-avoidance.md))
 
 Every command source goes through one arbiter, which picks the highest-priority
 source with a fresh command and stops the robot if none is fresh. Manual input

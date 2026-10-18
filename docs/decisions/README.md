@@ -18,3 +18,4 @@ discussed, so this list stays a description of the project rather than a plan.
 | [0007](0007-external-api-module.md) | Expose the simulation through a TCP API in its own module | Accepted |
 | [0008](0008-scenarios-as-data.md) | Define scenarios as JSON, judged by the test harness | Accepted |
 | [0009](0009-brains-receive-a-snapshot.md) | Give brains a sensor snapshot, never the robot | Accepted |
+| [0010](0010-reactive-obstacle-avoidance.md) | Avoid obstacles reactively, layered on go-to-goal | Accepted |

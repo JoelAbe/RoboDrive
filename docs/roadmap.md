@@ -72,6 +72,11 @@ so autonomy can be shown failing for a documented, physical reason.
 **Done when:** the autonomy passes a set of scenarios, including a documented
 failure case in fog.
 
+Goal seeking and reactive avoidance are done
+([ADR 0010](decisions/0010-reactive-obstacle-avoidance.md)). The slalom,
+written in Phase 3 as a known failure, now passes and guards avoidance against
+regressions. Fog is next.
+
 ## Phase 5: Operator view
 
 Telemetry panel, mode switching, runtime-tunable parameters.
