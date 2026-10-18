@@ -5,36 +5,6 @@
 
 namespace
 {
-	/**
-	 * A 270 degree scan at one-degree spacing with nothing in it, then each
-	 * given point placed on the beam closest to its bearing. Enough to build
-	 * any situation a test needs by hand.
-	 */
-	FLidarScan AvoidanceScan(const TArray<FVector2D>& Points)
-	{
-		constexpr int32 BeamCount = 271;
-
-		FLidarScan Scan;
-		Scan.AngleMinRad = FMath::DegreesToRadians(-135.0);
-		Scan.AngleIncrementRad = FMath::DegreesToRadians(1.0);
-		Scan.RangeMinM = 0.05;
-		Scan.RangeMaxM = 12.0;
-		Scan.RangesM.Init(RoboLidar::NoReturn(), BeamCount);
-
-		for (const FVector2D& Point : Points)
-		{
-			const double BearingRad = FMath::Atan2(Point.Y, Point.X);
-			const int32 Beam = FMath::RoundToInt((BearingRad - Scan.AngleMinRad) / Scan.AngleIncrementRad);
-
-			if (Beam >= 0 && Beam < BeamCount)
-			{
-				Scan.RangesM[Beam] = FMath::Min(Scan.RangesM[Beam], Point.Size());
-			}
-		}
-
-		return Scan;
-	}
-
 	const FAvoidanceSettings AvoidanceDefaults;
 }
 
@@ -44,7 +14,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidanceOpenSpaceTest,
 bool FAvoidanceOpenSpaceTest::RunTest(const FString& Parameters)
 {
 	// Nothing in the way: go straight for the goal, with no detour.
-	const TOptional<double> Heading = RoboAvoidance::ChooseHeading(AvoidanceScan({}), 0.3, AvoidanceDefaults);
+	const TOptional<double> Heading = RoboAvoidance::ChooseHeading(RoboTest::MakeScan({}), 0.3, AvoidanceDefaults);
 
 	TestTrue(TEXT("A heading is found"), Heading.IsSet());
 	TestNearlyEqual(TEXT("It is the goal's own bearing"), Heading.Get(0.0), 0.3, RoboTest::Tolerance);
@@ -57,7 +27,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidanceDeviatesTest,
 bool FAvoidanceDeviatesTest::RunTest(const FString& Parameters)
 {
 	// An obstacle dead ahead, 1 m away, with the goal beyond it.
-	const FLidarScan Scan = AvoidanceScan({ FVector2D(1.0, 0.0) });
+	const FLidarScan Scan = RoboTest::MakeScan({ FVector2D(1.0, 0.0) });
 	const TOptional<double> Heading = RoboAvoidance::ChooseHeading(Scan, 0.0, AvoidanceDefaults);
 
 	TestTrue(TEXT("A way round is found"), Heading.IsSet());
@@ -75,7 +45,7 @@ bool FAvoidanceSmallestDeviationTest::RunTest(const FString& Parameters)
 	// An obstacle slightly LEFT of straight ahead. Going right needs a smaller
 	// turn to clear it than going left, so despite left being tried first at
 	// each step, the search must settle on right.
-	const FLidarScan Scan = AvoidanceScan({ FVector2D(1.0, 0.2) });
+	const FLidarScan Scan = RoboTest::MakeScan({ FVector2D(1.0, 0.2) });
 	const TOptional<double> Heading = RoboAvoidance::ChooseHeading(Scan, 0.0, AvoidanceDefaults);
 
 	TestTrue(TEXT("A way round is found"), Heading.IsSet());
@@ -119,7 +89,7 @@ bool FAvoidanceNoReturnTest::RunTest(const FString& Parameters)
 	// A scan of nothing but no-returns produces no points, so nothing blocks.
 	// This is the simulation-only assumption, made deliberately and pinned here.
 	TestEqual(TEXT("No-returns produce no points"),
-		RoboAvoidance::ScanToPoints(AvoidanceScan({})).Num(), 0);
+		RoboAvoidance::ScanToPoints(RoboTest::MakeScan({})).Num(), 0);
 	return true;
 }
 
@@ -137,7 +107,7 @@ bool FAvoidanceBoxedInTest::RunTest(const FString& Parameters)
 	}
 
 	TestFalse(TEXT("No heading is offered when everything is blocked"),
-		RoboAvoidance::ChooseHeading(AvoidanceScan(Ring), 0.0, AvoidanceDefaults).IsSet());
+		RoboAvoidance::ChooseHeading(RoboTest::MakeScan(Ring), 0.0, AvoidanceDefaults).IsSet());
 	return true;
 }
 
@@ -150,7 +120,7 @@ bool FAvoidanceBlindSpotTest::RunTest(const FString& Parameters)
 	// not, the robot cannot know that heading is clear, so it must pick one it
 	// can see. The robot will turn toward the goal over successive decisions.
 	const TOptional<double> Heading =
-		RoboAvoidance::ChooseHeading(AvoidanceScan({}), UE_DOUBLE_PI, AvoidanceDefaults);
+		RoboAvoidance::ChooseHeading(RoboTest::MakeScan({}), UE_DOUBLE_PI, AvoidanceDefaults);
 
 	TestTrue(TEXT("A heading is found"), Heading.IsSet());
 	TestTrue(TEXT("It is inside the field of view"),
