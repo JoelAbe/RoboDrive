@@ -1,12 +1,17 @@
 """Run scenarios against the simulation and report pass or fail.
 
-    python Tools/analysis/run_scenarios.py
-    python Tools/analysis/run_scenarios.py Scenarios/corridor.json
+    python Tools/Analysis/run_scenarios.py
+    python Tools/Analysis/run_scenarios.py --driver harness
+    python Tools/Analysis/run_scenarios.py Scenarios/corridor.json
 
-Each scenario is loaded, driven toward its goal by a simple controller that
-steers by odometry alone, and then judged against ground truth. Exits with 0
-if every scenario behaved as expected, and 1 otherwise, so CI can read the
-result directly.
+Loading a scenario gives the robot its goal. By default the robot then drives
+itself with its in-engine brain and this script only watches. With
+--driver harness, a simple controller in this script drives instead, as a
+baseline: if a scenario fails under the robot's brain but passes under the
+harness, the problem is in the brain rather than the world.
+
+Either way the result is judged against ground truth. Exits with 0 if every
+scenario behaved as expected and 1 otherwise, so CI can read the result.
 
 The simulation must be playing.
 """
@@ -22,19 +27,20 @@ from pathlib import Path
 
 from robodrive_client import DEFAULT_HOST, DEFAULT_PORT, SimClient
 
-# Control runs at 10 Hz: a command, then 12 steps of the 120 Hz simulation.
+# Control and observation run at 10 Hz: 12 steps of the 120 Hz simulation.
 STEPS_PER_COMMAND = 12
 
-# A gentle controller. These are deliberately well inside the robot's limits,
-# so the wheels never saturate and a failure means a real problem rather than
-# the controller asking for more grip than exists.
+# The harness controller. Deliberately well inside the robot's limits, so a
+# failure means a real problem rather than asking for more grip than exists.
 MAX_SPEED_MS = 0.5
 MAX_TURN_RADS = 1.0
 HEADING_GAIN = 1.5
 SPEED_GAIN = 0.5
 
-# How long to hold an explicit stop before judging, in simulation steps.
+# How long to let the robot come to rest before judging, in simulation steps.
 SETTLE_STEPS = 60
+
+DRIVERS = ("robot", "harness")
 
 
 def wrap_angle(angle: float) -> float:
@@ -64,10 +70,7 @@ class Outcome:
 
 
 def go_to_goal(pose: dict, goal: dict) -> tuple[float, float, float]:
-    """Steer toward the goal using the robot's own odometry.
-
-    Uses no ground truth. That is the whole point: a controller that steered by
-    the truth would hide the dead reckoning error the test is meant to catch.
+    """The harness controller: steer toward the goal by odometry alone.
 
     Returns (linear velocity, angular velocity, believed distance to goal).
     """
@@ -76,18 +79,64 @@ def go_to_goal(pose: dict, goal: dict) -> tuple[float, float, float]:
     distance = math.hypot(dx, dy)
 
     heading_error = wrap_angle(math.atan2(dy, dx) - pose["yaw"])
-
     angular = max(-MAX_TURN_RADS, min(MAX_TURN_RADS, HEADING_GAIN * heading_error))
-
-    # Drive forward only when roughly facing the goal. cos(error) is 1 when
-    # facing it, 0 when it is off to the side, and negative behind, which the
-    # max() clamps to zero: the robot turns on the spot rather than reversing.
     linear = min(MAX_SPEED_MS, SPEED_GAIN * distance) * max(0.0, math.cos(heading_error))
 
     return linear, angular, distance
 
 
-def run_scenario(client: SimClient, path: Path) -> Outcome:
+def drive_with_harness(client: SimClient, goal: dict, tolerance: float,
+                       time_limit: float, start_time: float) -> tuple[str, float]:
+    """Steer from this script. Returns (how it ended, elapsed seconds)."""
+    elapsed = 0.0
+    while elapsed <= time_limit:
+        sensors = client.call("get_sensors", include_lidar=False)
+        elapsed = sensors["sim_time"] - start_time
+
+        linear, angular, believed_distance = go_to_goal(sensors["odometry"], goal)
+        if believed_distance < 0.5 * tolerance:
+            return "arrived", elapsed
+
+        client.call("set_command", v=linear, w=angular)
+        client.call("step", steps=STEPS_PER_COMMAND)
+
+    return "timeout", elapsed
+
+
+def drive_with_robot(client: SimClient, time_limit: float,
+                     start_time: float) -> tuple[str, float]:
+    """Hands off: let the robot's own brain drive, and watch the mission.
+
+    Sends no commands at all. A command from here would arrive as External,
+    which outranks the robot's Autonomy source, and would take the wheel away
+    from the very brain under test.
+    """
+    elapsed = 0.0
+    while elapsed <= time_limit:
+        client.call("step", steps=STEPS_PER_COMMAND)
+        state = client.call("get_state")
+        elapsed = state["sim_time"] - start_time
+
+        status = state.get("mission", {}).get("status")
+        if status in ("arrived", "failed"):
+            return status, elapsed
+
+    return "timeout", elapsed
+
+
+def settle(client: SimClient, driver: str) -> None:
+    """Let the robot come to rest before judging."""
+    for _ in range(SETTLE_STEPS // STEPS_PER_COMMAND):
+        # Under the harness, hold an explicit stop. Going quiet would let the
+        # command expire and hand control to the robot's brain, which has the
+        # same goal and would carry on driving before we could measure.
+        # Under the robot, its brain already holds still once arrived.
+        if driver == "harness":
+            client.call("set_command", v=0.0, w=0.0)
+        client.call("step", steps=STEPS_PER_COMMAND)
+
+
+def run_scenario(client: SimClient, path: Path, driver: str) -> Outcome:
     scenario = json.loads(path.read_text(encoding="utf-8"))
     name = scenario.get("name", path.stem)
     known_failure = scenario.get("known_failure")
@@ -99,42 +148,30 @@ def run_scenario(client: SimClient, path: Path) -> Outcome:
     tolerance = goal.get("tolerance_m", 0.5)
     time_limit = scenario.get("time_limit_s", 60.0)
 
+    # Loading also sets the mission goal, which is how the robot's brain learns
+    # where to go.
     client.call("load_scenario", scenario=scenario)
     start_time = client.call("get_state")["sim_time"]
 
-    believes_arrived = False
-    elapsed = 0.0
+    if driver == "harness":
+        ending, elapsed = drive_with_harness(client, goal, tolerance, time_limit, start_time)
+    else:
+        ending, elapsed = drive_with_robot(client, time_limit, start_time)
 
-    while elapsed <= time_limit:
-        sensors = client.call("get_sensors", include_lidar=False)
-        elapsed = sensors["sim_time"] - start_time
-
-        linear, angular, believed_distance = go_to_goal(sensors["odometry"], goal)
-
-        # Stop when odometry says we are well inside the tolerance. Whether we
-        # really are is decided below, by the truth.
-        if believed_distance < 0.5 * tolerance:
-            believes_arrived = True
-            break
-
-        client.call("set_command", v=linear, w=angular)
-        client.call("step", steps=STEPS_PER_COMMAND)
-
-    # Hold an explicit stop while the robot settles. Simply going quiet is not
-    # enough: the command would expire and any lower-priority source, like the
-    # stub autonomy, would take over and drive off before we could measure.
-    for _ in range(SETTLE_STEPS // STEPS_PER_COMMAND):
-        client.call("set_command", v=0.0, w=0.0)
-        client.call("step", steps=STEPS_PER_COMMAND)
+    settle(client, driver)
 
     truth = client.call("get_ground_truth")
     true_pose = truth["pose"]
     true_distance = math.hypot(goal["x"] - true_pose["x"], goal["y"] - true_pose["y"])
     odometry_error = truth.get("odometry_error_m", float("nan"))
 
-    if not believes_arrived:
+    if ending == "timeout":
         return Outcome(name, False, known_failure,
                        f"timed out after {time_limit:.0f} s, {true_distance:.2f} m from goal")
+
+    if ending == "failed":
+        return Outcome(name, False, known_failure,
+                       f"the robot gave up after {elapsed:.1f} s, {true_distance:.2f} m from goal")
 
     if true_distance > tolerance:
         # The interesting failure: odometry was confident and wrong.
@@ -148,9 +185,12 @@ def run_scenario(client: SimClient, path: Path) -> Outcome:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("scenarios", nargs="*", type=Path,
                         help="scenario files; defaults to every file in Scenarios/")
+    parser.add_argument("--driver", choices=DRIVERS, default="robot",
+                        help="who drives: the robot's own brain, or this script")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args()
@@ -160,11 +200,12 @@ def main() -> int:
         print("no scenarios found", file=sys.stderr)
         return 1
 
+    print(f"driver: {args.driver}\n")
     outcomes: list[Outcome] = []
 
     with SimClient(args.host, args.port) as client:
         for path in paths:
-            outcome = run_scenario(client, path)
+            outcome = run_scenario(client, path, args.driver)
             outcomes.append(outcome)
 
             line = f"{outcome.name:<16}{outcome.status:<7}{outcome.detail}"
