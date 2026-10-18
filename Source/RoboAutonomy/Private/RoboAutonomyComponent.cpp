@@ -30,6 +30,7 @@ void URoboAutonomyComponent::BeginPlay()
 	Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>();
 	Lidar = Vehicle->FindComponentByClass<URoboLidarComponent>();
 	Brain = MakeBrain();
+	BrainSettings = GoToGoal;
 
 	UE_LOG(LogRoboAutonomy, Log, TEXT("Autonomy running on %s at %.0f Hz"),
 		*Vehicle->GetName(), UpdateRateHz);
@@ -39,21 +40,6 @@ TUniquePtr<FRoboBrain> URoboAutonomyComponent::MakeBrain() const
 {
 	return MakeUnique<FGoToGoalBrain>(GoToGoal);
 }
-
-#if WITH_EDITOR
-void URoboAutonomyComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-
-	// Settings changed in the Details panel during play: rebuild the brain so
-	// they take effect. It forgets whether it had arrived, which is harmless:
-	// it re-checks the distance on its next update.
-	if (Brain.IsValid())
-	{
-		Brain = MakeBrain();
-	}
-}
-#endif
 
 FBrainInputs URoboAutonomyComponent::BuildInputs(double NowSeconds) const
 {
@@ -101,6 +87,17 @@ void URoboAutonomyComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (NowSeconds >= NextUpdateTimeSeconds)
 	{
+		// Settings can change during play from the Details panel, a Blueprint
+		// or code. Comparing on every decision catches all three, where
+		// PostEditChangeProperty would only see the first. The comparison uses
+		// reflection, so it covers every UPROPERTY in the struct: a setting added
+		// later cannot be silently missed.
+		if (!FGoToGoalSettings::StaticStruct()->CompareScriptStruct(&GoToGoal, &BrainSettings, PPF_None))
+		{
+			Brain = MakeBrain();
+			BrainSettings = GoToGoal;
+		}
+		
 		NextUpdateTimeSeconds = NowSeconds + 1.0 / UpdateRateHz;
 
 		LastOutput = Brain->Update(BuildInputs(NowSeconds));

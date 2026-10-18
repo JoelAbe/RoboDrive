@@ -49,10 +49,6 @@ protected:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
-#if WITH_EDITOR
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
-
 private:
 	/** Create a brain from the current settings. */
 	TUniquePtr<FRoboBrain> MakeBrain() const;
@@ -77,5 +73,8 @@ private:
 	TUniquePtr<FRoboBrain> Brain;
 
 	FBrainOutput LastOutput;
+	/** The settings the current brain was built with, to notice when they change. */
+	FGoToGoalSettings BrainSettings;
+	
 	double NextUpdateTimeSeconds = 0.0;
 };
