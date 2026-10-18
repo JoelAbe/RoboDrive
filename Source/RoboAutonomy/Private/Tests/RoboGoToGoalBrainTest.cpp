@@ -112,17 +112,21 @@ bool FGoToGoalHysteresisTest::RunTest(const FString& Parameters)
 {
 	FGoToGoalBrain Brain;
 
-	// Arrive: 0.2 m is inside the 0.25 m arrive radius.
-	Brain.Update(GoToGoalInputs(0.2, 0.0));
+	// The goal stays fixed at the origin and only the robot moves. Moving the
+	// goal instead would count as a new journey and clear the arrived flag,
+	// which is what the NewGoal test checks.
 
-	// Coast to 0.4 m: outside the arrive radius but inside the 0.5 m leave
-	// radius. A single threshold would restart here.
+	// Arrive: 0.2 m short of the goal, inside the 0.25 m arrive radius.
+	Brain.Update(GoToGoalInputs(0.0, 0.0, -0.2));
+
+	// Coast to 0.4 m away: outside the arrive radius but inside the 0.5 m
+	// leave radius. A single threshold would restart here.
 	TestEqual(TEXT("Stays arrived after coasting a little"),
-		Brain.Update(GoToGoalInputs(0.4, 0.0)).Status, EMissionStatus::Arrived);
+		Brain.Update(GoToGoalInputs(0.0, 0.0, -0.4)).Status, EMissionStatus::Arrived);
 
 	// Pushed out to 0.6 m: beyond the leave radius, so set off again.
 	TestEqual(TEXT("Sets off again once clearly away"),
-		Brain.Update(GoToGoalInputs(0.6, 0.0)).Status, EMissionStatus::Active);
+		Brain.Update(GoToGoalInputs(0.0, 0.0, -0.6)).Status, EMissionStatus::Active);
 	return true;
 }
 
