@@ -46,6 +46,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lidar|Error", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	double DropoutProbability = 0.0;
 
+	/** How readily fog is mistaken for a target. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lidar|Error", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	double FogEchoFraction = 0.1;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lidar|Error")
 	int32 RandomSeed = 2024;
 

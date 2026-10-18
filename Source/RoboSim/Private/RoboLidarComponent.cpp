@@ -1,6 +1,8 @@
 ﻿#include "RoboLidarComponent.h"
 
 #include "RoboFrames.h"
+#include "RoboFog.h"
+#include "RoboWeather.h"
 #include "RoboNoise.h"
 #include "RoboSimSubsystem.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
@@ -70,6 +72,10 @@ void URoboLidarComponent::Sweep(double NowSeconds)
 	const FQuat SensorRotation = GetComponentQuat();
 	const double MaxRangeUU = RangeMaxM * RoboFrames::UUPerMeter;
 
+	// Read once per sweep: the weather does not change partway through one.
+	const URoboWeatherSubsystem* Weather = URoboWeatherSubsystem::Get(this);
+	const double ExtinctionPerM = Weather != nullptr ? Weather->GetExtinctionPerM() : 0.0;
+	
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(RoboLidarSweep), false, GetOwner());
 
 	for (int32 Index = 0; Index < BeamCount; ++Index)
@@ -85,12 +91,35 @@ void URoboLidarComponent::Sweep(double NowSeconds)
 		const bool bHit = World->LineTraceSingleByChannel(
 			Hit, OriginUU, OriginUU + DirectionUe * MaxRangeUU, ECC_Visibility, Params);
 
-		double RangeM = RoboLidar::NoReturn();
+		// What the beam really meets first: a surface, if the fog leaves its
+		// return strong enough to detect, or the fog itself.
+		double TrueRangeM = RoboLidar::NoReturn();
+		bool bFogEcho = false;
 
 		if (bHit)
 		{
-			const double MeasuredM = RoboNoise::Gaussian(
-				NoiseStream, Hit.Distance * RoboFrames::MetersPerUU, RangeNoiseStdDevM);
+			const double SurfaceM = Hit.Distance * RoboFrames::MetersPerUU;
+			if (RoboFog::IsDetectable(SurfaceM, RangeMaxM, ExtinctionPerM))
+			{
+				TrueRangeM = SurfaceM;
+			}
+		}
+
+		// An echo only counts if it comes before the surface, is beyond the
+		// minimum range a real sensor can measure, and is itself strong enough.
+		const double EchoM = RoboFog::SampleEchoM(NoiseStream, ExtinctionPerM, FogEchoFraction);
+		if (EchoM >= RangeMinM && EchoM < TrueRangeM
+			&& RoboFog::IsDetectable(EchoM, RangeMaxM, ExtinctionPerM))
+		{
+			TrueRangeM = EchoM;
+			bFogEcho = true;
+		}
+
+		double RangeM = RoboLidar::NoReturn();
+
+		if (RoboLidar::HasReturn(TrueRangeM))
+		{
+			const double MeasuredM = RoboNoise::Gaussian(NoiseStream, TrueRangeM, RangeNoiseStdDevM);
 
 			// A real sensor reports nothing when the surface is too dark or too
 			// oblique, and nothing inside its minimum range either.
@@ -103,14 +132,20 @@ void URoboLidarComponent::Sweep(double NowSeconds)
 
 		LatestScan.RangesM[Index] = RangeM;
 
-		if (bDrawScan)
+				if (bDrawScan)
 		{
 			const bool bReturned = RoboLidar::HasReturn(RangeM);
 			const double DrawLengthUU = bReturned ? RangeM * RoboFrames::UUPerMeter : MaxRangeUU;
 
+			// Fog echoes are drawn cyan. The sensor cannot tell them apart from
+			// real returns, and neither can the brain; only the simulation, which
+			// knows the truth, can colour them differently for a person watching.
+			const FColor Colour = !bReturned ? FColor(40, 40, 40)
+				: bFogEcho ? FColor::Cyan
+				: FColor::Orange;
+
 			DrawDebugLine(World, OriginUU, OriginUU + DirectionUe * DrawLengthUU,
-				bReturned ? FColor::Orange : FColor(40, 40, 40),
-				false, 1.0f / ScanRateHz, 0, 0.5f);
+				Colour, false, 1.0f / ScanRateHz, 0, 0.5f);
 		}
 	}
 }
