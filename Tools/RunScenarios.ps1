@@ -12,13 +12,19 @@
     ./Tools/RunScenarios.ps1
 #>
 param(
-    [string]$EngineDir = "C:\Program Files\Epic Games\UE_5.8",
+    [string]$EngineDir = "",
     [int]$Port = 8766,
     [int]$StartupTimeoutSeconds = 180
 )
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $Project     = Join-Path $ProjectRoot "RoboDrive.uproject"
+# Find the engine the way Unreal does, unless one was passed explicitly.
+. (Join-Path $PSScriptRoot "EngineLocation.ps1")
+if (-not $EngineDir) {
+    $EngineDir = Find-UnrealEngine -ProjectFile $Project
+}
+Write-Host "Using engine at $EngineDir"
 $Harness     = Join-Path $ProjectRoot "Tools\Analysis\run_scenarios.py"
 $LogFile     = Join-Path $ProjectRoot "Saved\Logs\RunScenarios.log"
 
