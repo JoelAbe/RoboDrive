@@ -5,7 +5,6 @@
   "start": { "x": 0.0, "y": 0.0, "yaw": 0.0 },
   "goal": { "x": 10.0, "y": 0.0, "tolerance_m": 0.5 },
   "time_limit_s": 60.0,
-  "known_failure": "Needs lidar-based obstacle avoidance, which arrives in Phase 4.",
   "obstacles": [
     { "x": 3.0, "y":  0.15, "size": [0.4, 0.4, 1.0] },
     { "x": 5.5, "y": -0.15, "size": [0.4, 0.4, 1.0] },
