@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "RoboAvoidance.h"
 #include "Components/ActorComponent.h"
 #include "RoboGoToGoalBrain.h"
 #include "RoboAutonomyComponent.generated.h"
@@ -20,6 +21,18 @@ class URoboOdometryComponent;
  * cannot reference RoboAutonomy: the brain attaches to the body, never the
  * other way round.
  */
+
+/** Which brain the robot runs. */
+UENUM(BlueprintType)
+enum class EBrainKind : uint8
+{
+	/** Straight for the goal. Knows nothing about obstacles. */
+	GoToGoal = 0	UMETA(DisplayName = "Go To Goal"),
+
+	/** Go-to-goal plus lidar obstacle avoidance. */
+	Avoiding = 1	UMETA(DisplayName = "Avoiding")
+};
+
 UCLASS(ClassGroup = (Robo), meta = (BlueprintSpawnableComponent))
 class ROBOAUTONOMY_API URoboAutonomyComponent : public UActorComponent
 {
@@ -37,10 +50,18 @@ public:
 		meta = (ClampMin = "1.0", ClampMax = "100.0"))
 	double UpdateRateHz = 10.0;
 
+	/** Which brain drives. Changeable during play. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Autonomy")
+	EBrainKind BrainKind = EBrainKind::Avoiding;
+	
 	/** Tuning for the go-to-goal brain. Editable during play. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Autonomy")
 	FGoToGoalSettings GoToGoal;
 
+	/** Tuning for obstacle avoidance, used by the Avoiding brain. Editable during play. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Autonomy")
+	FAvoidanceSettings Avoidance;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDrawReadout = true;
 
@@ -73,8 +94,17 @@ private:
 	TUniquePtr<FRoboBrain> Brain;
 
 	FBrainOutput LastOutput;
-	/** The settings the current brain was built with, to notice when they change. */
-	FGoToGoalSettings BrainSettings;
+	
+	/** What the current brain was built from, to notice when any of it changes. */
+	EBrainKind BuiltKind = EBrainKind::Avoiding;
+	FGoToGoalSettings BuiltGoToGoal;
+	FAvoidanceSettings BuiltAvoidance;
+
+	/** Whether any setting has changed since the brain was built. */
+	bool IsBrainStale() const;
+
+	/** Build a brain from the current settings and remember what it was built from. */
+	void RebuildBrain();
 	
 	double NextUpdateTimeSeconds = 0.0;
 };

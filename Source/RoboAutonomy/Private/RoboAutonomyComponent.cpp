@@ -1,6 +1,8 @@
 ﻿#include "RoboAutonomyComponent.h"
 
 #include "RoboAutonomy.h"
+#include "RoboAvoidingBrain.h"
+#include "RoboFrames.h"
 #include "RoboLidarComponent.h"
 #include "RoboMission.h"
 #include "RoboOdometryComponent.h"
@@ -29,8 +31,7 @@ void URoboAutonomyComponent::BeginPlay()
 
 	Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>();
 	Lidar = Vehicle->FindComponentByClass<URoboLidarComponent>();
-	Brain = MakeBrain();
-	BrainSettings = GoToGoal;
+	RebuildBrain();
 
 	UE_LOG(LogRoboAutonomy, Log, TEXT("Autonomy running on %s at %.0f Hz"),
 		*Vehicle->GetName(), UpdateRateHz);
@@ -38,7 +39,32 @@ void URoboAutonomyComponent::BeginPlay()
 
 TUniquePtr<FRoboBrain> URoboAutonomyComponent::MakeBrain() const
 {
-	return MakeUnique<FGoToGoalBrain>(GoToGoal);
+	switch (BrainKind)
+	{
+	case EBrainKind::GoToGoal:
+		return MakeUnique<FGoToGoalBrain>(GoToGoal);
+
+	case EBrainKind::Avoiding:
+	default:
+		return MakeUnique<FAvoidingBrain>(GoToGoal, Avoidance);
+	}
+}
+
+void URoboAutonomyComponent::RebuildBrain()
+{
+	Brain = MakeBrain();
+	BuiltKind = BrainKind;
+	BuiltGoToGoal = GoToGoal;
+	BuiltAvoidance = Avoidance;
+}
+
+bool URoboAutonomyComponent::IsBrainStale() const
+{
+	// Reflection compares every field of each settings struct, so a setting
+	// added later is covered without touching this function.
+	return BrainKind != BuiltKind
+		|| !FGoToGoalSettings::StaticStruct()->CompareScriptStruct(&GoToGoal, &BuiltGoToGoal, PPF_None)
+		|| !FAvoidanceSettings::StaticStruct()->CompareScriptStruct(&Avoidance, &BuiltAvoidance, PPF_None);
 }
 
 FBrainInputs URoboAutonomyComponent::BuildInputs(double NowSeconds) const
@@ -87,15 +113,11 @@ void URoboAutonomyComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (NowSeconds >= NextUpdateTimeSeconds)
 	{
-		// Settings can change during play from the Details panel, a Blueprint
-		// or code. Comparing on every decision catches all three, where
-		// PostEditChangeProperty would only see the first. The comparison uses
-		// reflection, so it covers every UPROPERTY in the struct: a setting added
-		// later cannot be silently missed.
-		if (!FGoToGoalSettings::StaticStruct()->CompareScriptStruct(&GoToGoal, &BrainSettings, PPF_None))
+		// Any setting may change during play, from the Details panel, a
+		// Blueprint or code. Checked on every decision so all three are caught.
+		if (IsBrainStale())
 		{
-			Brain = MakeBrain();
-			BrainSettings = GoToGoal;
+			RebuildBrain();
 		}
 		
 		NextUpdateTimeSeconds = NowSeconds + 1.0 / UpdateRateHz;
@@ -127,5 +149,21 @@ void URoboAutonomyComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 				*UEnum::GetDisplayValueAsText(LastOutput.Status).ToString(),
 				LastOutput.Command.Linear, LastOutput.Command.Angular),
 			Vehicle, FColor::Green, 0.0f, true);
+
+		if (LastOutput.ChosenHeadingRad.IsSet())
+		{
+			// The heading is relative to the robot, in REP-103. Convert it into
+			// the robot's local Unreal frame, then rotate it into the world by the
+			// robot's transform. Using the true transform here is fine: this is
+			// drawing for a person watching, never something the brain sees.
+			const double HeadingRad = LastOutput.ChosenHeadingRad.GetValue();
+			const FVector LocalDirection = RoboFrames::PositionToUe(
+				FVector(FMath::Cos(HeadingRad), FMath::Sin(HeadingRad), 0.0)).GetSafeNormal();
+			const FVector WorldDirection = Vehicle->GetActorQuat().RotateVector(LocalDirection);
+			const FVector Start = Vehicle->GetActorLocation() + FVector(0.0, 0.0, 30.0);
+
+			DrawDebugDirectionalArrow(GetWorld(), Start, Start + WorldDirection * 150.0,
+				25.0f, FColor::Purple, false, 0.0f, 0, 3.0f);
+		}
 	}
 }
