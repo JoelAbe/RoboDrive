@@ -32,6 +32,11 @@ struct FAvoidanceSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Avoidance",
 		meta = (ClampMin = "0.5", ClampMax = "45.0"))
 	double CandidateStepDeg = 5.0;
+
+	/** How long to stay boxed in before giving up and reporting the mission failed, s. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Avoidance",
+		meta = (ClampMin = "0.5", Units = "s"))
+	double BlockedTimeoutS = 5.0;
 };
 
 /**

@@ -41,6 +41,13 @@ struct FBrainOutput
 
 	/** How the brain thinks the mission is going, reported to the mission subsystem. */
 	EMissionStatus Status = EMissionStatus::None;
+
+	/**
+	 * The direction the brain chose to steer, relative to the robot, rad. For
+	 * drawing only: it lets a person watching see what the brain decided,
+	 * rather than inferring it from how the wheels moved.
+	 */
+	TOptional<double> ChosenHeadingRad;
 };
 
 /**
