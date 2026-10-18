@@ -57,6 +57,17 @@ public:
 	virtual void Reset() override;
 
 	void SetSettings(const FGoToGoalSettings& InSettings) { Settings = InSettings; }
+	
+	/**
+	 * Turn toward a heading and drive, slowing near the goal and when facing
+	 * away from it. Shared with brains that choose a heading other than
+	 * straight at the goal.
+	 *
+	 * @param HeadingErrorRad  Desired heading relative to the robot's own, rad.
+	 * @param DistanceM        Distance remaining to the goal, m.
+	 */
+	static RoboDiffDrive::FBodyVelocity SteerTowards(double HeadingErrorRad, double DistanceM,
+		const FGoToGoalSettings& Settings);
 
 private:
 	FGoToGoalSettings Settings;

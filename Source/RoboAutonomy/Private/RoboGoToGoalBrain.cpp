@@ -22,6 +22,23 @@ void FGoToGoalBrain::Reset()
 	bHasLastGoal = false;
 }
 
+RoboDiffDrive::FBodyVelocity FGoToGoalBrain::SteerTowards(double HeadingErrorRad, double DistanceM,
+	const FGoToGoalSettings& Settings)
+{
+	RoboDiffDrive::FBodyVelocity Command;
+
+	Command.Angular = FMath::Clamp(
+		Settings.HeadingGain * HeadingErrorRad, -Settings.MaxTurnRadS, Settings.MaxTurnRadS);
+
+	// Drive forward only when roughly facing the heading: cos is 1 when facing
+	// it, 0 when it is to the side, and negative when it is behind, which is
+	// clamped to zero so the robot turns on the spot rather than reversing.
+	Command.Linear = FMath::Min(Settings.MaxSpeedMS, Settings.SpeedGain * DistanceM)
+		* FMath::Max(0.0, FMath::Cos(HeadingErrorRad));
+
+	return Command;
+}
+
 FBrainOutput FGoToGoalBrain::Update(const FBrainInputs& Inputs)
 {
 	// A default output is a zero command, which is a stop.
@@ -68,14 +85,7 @@ FBrainOutput FGoToGoalBrain::Update(const FBrainInputs& Inputs)
 	const double HeadingError = RoboFrames::WrapRadians(
 		FMath::Atan2(DY, DX) - Inputs.Odometry.YawRad);
 
-	Output.Command.Angular = FMath::Clamp(
-		Settings.HeadingGain * HeadingError, -Settings.MaxTurnRadS, Settings.MaxTurnRadS);
-
-	// Drive forward only when roughly facing the goal: cos is 1 when facing it,
-	// 0 when it is to the side, and negative when it is behind, which is
-	// clamped to zero so the robot turns on the spot rather than reversing.
-	Output.Command.Linear = FMath::Min(Settings.MaxSpeedMS, Settings.SpeedGain * Distance)
-		* FMath::Max(0.0, FMath::Cos(HeadingError));
+	Output.Command = SteerTowards(HeadingError, Distance, Settings);
 
 	Output.Status = EMissionStatus::Active;
 	return Output;
