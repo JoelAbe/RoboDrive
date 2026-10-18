@@ -15,7 +15,8 @@ Workflow: [`.github/workflows/simulation-tests.yml`](../.github/workflows/simula
 3. **`Tools/RunScenarios.ps1`** launches the simulation as a game with no
    window or rendering, waits until its API accepts connections, runs every
    scenario through `Tools/Analysis/run_scenarios.py`, and shuts the
-   simulation down.
+   simulation down. The robot's own in-engine brain drives; the harness
+   only watches and judges.
 4. **Logs are uploaded** as a build artifact whether the run passed or failed,
    so a red run can be diagnosed from GitHub.
 

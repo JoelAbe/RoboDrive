@@ -48,9 +48,9 @@ Close the editor first; the build step cannot run while Live Coding is active.
 A filter that matches no tests is treated as a failure rather than a pass.
 Inside the editor, the same tests are under **Tools → Test Automation**.
 
-**Scenario tests** launch the simulation headless and drive the robot through
-every scenario in `Scenarios/` via the external API, judging each against
-ground truth.
+**Scenario tests** launch the simulation headless, load each scenario in
+`Scenarios/` through the external API, let the robot's in-engine brain drive
+to the goal, and judge the result against ground truth.
 
 ```powershell
 ./Tools/RunScenarios.ps1

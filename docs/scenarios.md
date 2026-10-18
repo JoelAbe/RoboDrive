@@ -12,8 +12,13 @@ fields.
 
 - **The simulator** builds the world: it places obstacles, moves the robot to
   its start pose and marks the goal. It ignores every other field.
-- **The test harness** (`Tools/Analysis/run_scenarios.py`) drives the robot and
-  judges the result against ground truth, using the goal and time limit.
+- **The test harness** (`Tools/Analysis/run_scenarios.py`) judges the result
+  against ground truth, using the goal and time limit.
+
+Loading a scenario also gives the robot its goal, through the mission. By
+default the robot's in-engine brain then drives and the harness only watches,
+sending no commands of its own: a command from the harness would outrank the
+brain and take the wheel away from the thing under test.
 
 Keeping the pass and fail criteria out of the simulator means the rules a test
 is judged by are in the same place as the test, in a language the person
@@ -90,8 +95,14 @@ python Tools/Analysis/load_scenario.py Scenarios/corridor.json
 python Tools/Analysis/run_scenarios.py
 ```
 
-The first only builds the world, for looking at. The second runs every
-scenario and exits non-zero if any fails. To run the whole suite headless,
+The first only builds the world, for looking at; the robot will drive itself
+toward the goal. The second runs every scenario and exits non-zero if any
+fails.
+
+`run_scenarios.py --driver harness` drives with a simple controller in the
+script instead of the robot's brain. It is a baseline: a scenario that fails
+under the brain but passes under the harness points at the brain rather than
+the world. To run the whole suite headless,
 as CI does, use `./Tools/RunScenarios.ps1`.
 
 The operations these scripts use are described in the [API reference](api.md).

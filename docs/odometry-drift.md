@@ -5,7 +5,8 @@ the world, so every error stays in the estimate permanently. These runs
 measure how different kinds of error behave, using the simulation's ground
 truth as the reference.
 
-Each run was driven by the stub autonomy at 0.5 m/s around a 2 m radius, so
+Each run was driven by the stub autonomy (a fixed-pattern driver, since
+replaced by the in-engine brain) at 0.5 m/s around a 2 m radius, so
 the path is identical and the only variable is the one named. Runs are
 recorded at 50 Hz to CSV and analysed with `Tools/Analysis/analyse_run.py`.
 
