@@ -51,10 +51,14 @@ Inside the editor, the same tests are under **Tools → Test Automation**.
 
 **Scenario tests** launch the simulation headless, load each scenario in
 `Scenarios/` through the external API, let the robot's in-engine brain drive
-to the goal, and judge the result against ground truth.
+to the goal, and judge the result against ground truth. Headless runs use a
+fixed time step and run about 12 times faster than real time, with the same
+results.
+([ADR 0012](docs/decisions/0012-headless-runs-on-a-fixed-time-step.md))
 
 ```powershell
-./Tools/RunScenarios.ps1
+./Tools/RunScenarios.ps1                                         # the scenario suite
+./Tools/RunScenarios.ps1 -Script Tools\Analysis\fog_sweep.py     # any script, headless
 ```
 
 Both scripts exit 0 on success and 1 on failure. Every push to `main` runs

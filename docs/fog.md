@@ -73,6 +73,26 @@ runs failed, with fog echoes on:
 
 Every failure here was a false arrival, 0.72 to 1.76 m from the goal.
 
+### The slalom again, headless
+
+The slalom sweep was repeated headless, faster than real time
+([ADR 0012](decisions/0012-headless-runs-on-a-fixed-time-step.md)).
+
+| Visibility | Fog echoes on | Fog echoes off |
+|---|---|---|
+| clear | 3/3, 21.5 s | |
+| 100 m | 1/3, 25.7 s | 3/3, 21.5 s |
+| 50 m | 0/3 | 3/3, 21.6 s |
+| 30 m | 0/3 | 3/3, 21.6 s |
+| 20 m | 0/3 | 3/3, 21.5 s |
+| 15 m | 0/3 | 3/3, 21.6 s |
+| 10 m | 0/3 | 3/3, 21.6 s |
+
+The same pattern: every run without echoes succeeds, every failure at 30 m and
+above is a false arrival, and below 20 m the robot runs out of time. Across both
+slalom sweeps, runs with echoes reached the goal 2 times in 6 at 100 m, once in
+6 at 50 m and 30 m, and never at 20 m or below.
+
 ### Odometry error at the end of each run
 
 | | Fog echoes off | Fog echoes on |
@@ -134,9 +154,9 @@ lidar, and the link between them is the controller.
 - **The fog echo fraction is assumed, not calibrated.** Real lidars differ
   widely in how readily they echo off fog. A different value moves the cliff;
   it does not remove the failure.
-- **Three runs per case.** The pass rates are rough: one run in three and two
-  in three are not reliably different. The pattern across visibilities and
-  between echoes on and off is what the evidence supports.
+- **Few runs per case.** Three per sweep, six across both slalom sweeps. The
+  pass rates are rough; the pattern across visibilities and between echoes on
+  and off is what the evidence supports, and it repeated.
 - **Fog echoes are independent from beam to beam and scan to scan.** Real fog
   has structure, such as denser patches, which this model does not have.
 
@@ -168,12 +188,16 @@ the harness reports `XPASS` and fails the run until the marker is removed.
 
 ## Reproducing
 
-With the simulation playing:
+Headless, with the editor closed, in about two minutes:
+
+```
+./Tools/RunScenarios.ps1 -Script Tools\Analysis\fog_sweep.py
+./Tools/RunScenarios.ps1 -Script Tools\Analysis\fog_sweep.py -ScriptArgs "--without-obstacles --visibilities 100 50 30"
+```
+
+Or against the editor while playing, in real time, which for the first takes
+about half an hour:
 
 ```
 python Tools/Analysis/fog_sweep.py
-python Tools/Analysis/fog_sweep.py --without-obstacles --visibilities 100 50 30
 ```
-
-The first takes about half an hour in real time, mostly runs that use their
-full 60 s.

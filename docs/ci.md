@@ -16,7 +16,9 @@ Workflow: [`.github/workflows/simulation-tests.yml`](../.github/workflows/simula
    window or rendering, waits until its API accepts connections, runs every
    scenario through `Tools/Analysis/run_scenarios.py`, and shuts the
    simulation down. The robot's own in-engine brain drives; the harness
-   only watches and judges.
+   only watches and judges. The simulation runs on a fixed time step, about
+   12 times faster than real time
+   ([ADR 0012](decisions/0012-headless-runs-on-a-fixed-time-step.md)).
 4. **Logs are uploaded** as a build artifact whether the run passed or failed,
    so a red run can be diagnosed from GitHub.
 
@@ -102,3 +104,11 @@ Close the editor first, since the build cannot run while Live Coding is active:
 ```
 
 Both exit with 0 on success and 1 on failure, exactly as CI sees them.
+
+`RunScenarios.ps1` also takes:
+
+| Parameter | Meaning |
+|---|---|
+| `-RealTime` | Pace the simulation by the wall clock instead of running it as fast as possible |
+| `-Script` | Run a different Python script against the headless simulation, such as `Tools\Analysis\fog_sweep.py` |
+| `-ScriptArgs` | Arguments for that script, as one quoted string, such as `"--runs 1"` |
