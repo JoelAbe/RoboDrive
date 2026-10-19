@@ -6,14 +6,14 @@ A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, an external API, and a scenario test suite that runs in CI.
 
-> **Status:** Phase 3 complete, Phase 4 in progress. The robot drives from
-> velocity commands through real differential drive kinematics on Chaos
-> physics, carries wheel encoders, an IMU, a lidar and a camera on a simulated
-> clock, and estimates its own pose by dead reckoning. An external TCP API lets
+> **Status:** Phase 4 complete. The robot drives from velocity commands
+> through real differential drive kinematics on Chaos physics, carries wheel
+> encoders, an IMU, a lidar and a camera on a simulated clock, and estimates
+> its own pose by dead reckoning. An external TCP API lets
 > any client drive and observe it, scenarios are defined as JSON, and every
-> push runs the full scenario suite in CI. In Phase 4 the robot now drives
-> itself to a goal and steers around obstacles its lidar sees; fog that
-> degrades the lidar comes next. See the [roadmap](docs/roadmap.md).
+> push runs the full scenario suite in CI. The robot drives itself to a goal,
+> steering around obstacles its lidar sees, and fails in fog for a measured,
+> documented reason. See the [roadmap](docs/roadmap.md).
 
 ## Requirements
 
@@ -158,6 +158,9 @@ limit, written without Unreal and reviewable in a diff. The
   noise and wheel slip each show up, measured against ground truth.
 - [Lidar profiling](docs/profiling-lidar.md) — sensor cost against ray count,
   and the measured real-time ceiling.
+- [Fog](docs/fog.md) — how fog defeats the obstacle avoidance: not by
+  shortening the lidar's range, but by clutter that makes the steering jitter,
+  the wheels slip and odometry claim arrival at a goal not reached.
 
 ## Layout
 

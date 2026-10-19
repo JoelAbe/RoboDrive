@@ -91,7 +91,8 @@ receives both as identical ranges, since a real sensor cannot tell them apart.
 
 `slalom_fog` is the slalom with 10 m visibility and nothing else changed. It is
 a known failure: avoidance treats fog echoes as obstacles and steers around the
-fog itself.
+fog itself. How the robot fails across a range of visibilities, and why, is
+measured in [fog.md](fog.md).
 
 ## What a pass does not check
 

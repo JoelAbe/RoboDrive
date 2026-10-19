@@ -223,6 +223,22 @@ Withdraws the goal. The mission returns to `none`.
 
 Result: `{"status": "none"}`
 
+### `set_lidar`
+
+Configures the robot's lidar. Every field is optional; a request with none
+reports the current settings, so a client can note them and restore them
+later.
+
+| Request field | Required | Meaning |
+|---|---|---|
+| `fog_echo_fraction` | no | How readily fog is mistaken for a target, 0 to 1. Zero leaves fog only shortening the range. |
+
+Result: `{"fog_echo_fraction": ...}`, the setting now in force.
+
+This changes the sensor, as fitting a different lidar would on a real robot.
+It reveals nothing the robot could not know. It exists so a measurement can
+separate the two effects of fog ([fog.md](fog.md)).
+
 ## Errors
 
 Errors are reported as `"ok": false` with an `error` string. The connection
@@ -245,6 +261,8 @@ stays open.
 | `scenario has no 'start'` | The scenario has no start pose |
 | `obstacle N needs x, y and a three-element size` | An obstacle is malformed |
 | `visibility_m must be a positive number` | A scenario's visibility was zero, negative or not a number |
+| `the robot has no lidar` | `set_lidar` was sent to a robot without one |
+| `fog_echo_fraction must be between 0 and 1` | A fog echo fraction outside its range |
 
 ## Python client
 

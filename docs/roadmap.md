@@ -9,7 +9,7 @@ phase is not done until its tests and documentation exist.
 | 1 | Vehicle, differential-drive kinematics, control arbitration | Done |
 | 2 | Sensors, odometry, deterministic time, record and replay | Done |
 | 3 | External simulation API and data-driven scenarios | Done |
-| 4 | In-engine autonomy, judged by the scenario suite | In progress |
+| 4 | In-engine autonomy, judged by the scenario suite | Done |
 | 5 | Operator view | Not started |
 | 6 | ROS 2 adapter (software-in-the-loop) | Not started |
 
@@ -75,7 +75,13 @@ failure case in fog.
 Goal seeking and reactive avoidance are done
 ([ADR 0010](decisions/0010-reactive-obstacle-avoidance.md)). The slalom,
 written in Phase 3 as a known failure, now passes and guards avoidance against
-regressions. Fog is next.
+regressions.
+
+Fog is modelled as range loss and clutter on the lidar
+([ADR 0011](decisions/0011-fog-as-lidar-attenuation-and-clutter.md)). The
+documented failure is in [fog.md](fog.md): clutter, not lost range, defeats the
+avoidance, paralysing the robot in dense fog and, in light fog, corrupting its
+odometry until it claims to have arrived short of the goal.
 
 ## Phase 5: Operator view
 
