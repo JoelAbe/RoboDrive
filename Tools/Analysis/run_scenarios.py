@@ -22,6 +22,7 @@ import argparse
 import json
 import math
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -212,6 +213,11 @@ def main() -> int:
     outcomes: list[Outcome] = []
 
     with SimClient(args.host, args.port) as client:
+        # Measured here, end to end, independently of the simulator's own
+        # real-time factor: the sim time covered and the wall time it took.
+        wall_start = time.monotonic()
+        sim_start = client.call("get_state")["sim_time"]
+
         for path in paths:
             outcome = run_scenario(client, path, args.driver)
             outcomes.append(outcome)
@@ -220,7 +226,14 @@ def main() -> int:
             if outcome.known_failure:
                 line += f"\n{'':<23}known failure: {outcome.known_failure}"
             print(line)
+            
+        sim_elapsed = client.call("get_state")["sim_time"] - sim_start
+        wall_elapsed = time.monotonic() - wall_start
 
+    print()
+    print(f"{sim_elapsed:.0f} s simulated in {wall_elapsed:.0f} s of wall time, "
+          f"{sim_elapsed / wall_elapsed:.1f}x real time")
+          
     failed = [outcome for outcome in outcomes if outcome.fails_run]
 
     print()
