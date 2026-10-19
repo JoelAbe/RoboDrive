@@ -59,7 +59,7 @@ opens.
 ## Running the runner
 
 ```
-cd C:\actions-runner
+cd C:\Users\joelo\actions-runner
 ./run.cmd
 ```
 
@@ -70,11 +70,27 @@ job, and GitHub cancels jobs that wait more than 24 hours for a self-hosted
 runner. If that happens, start the runner and use **Run workflow** on the
 Actions tab to run it again.
 
-## Ports
+## Sharing the machine with the editor
 
-The scenario step runs the simulation on port **8766**, using the
-`-RoboApiPort` command-line override. The editor's play session uses the
-default **8765**, so CI can run while the editor is open.
+The runner builds its own checkout, under the runner's `_work` folder, but
+with the same installed engine as the editor.
+
+**The build step fails while Live Coding is active**, with *Unable to build
+while Live Coding is active*. Live Coding holds a lock on the engine's editor
+executable rather than on one project, so an open editor with Live Coding
+running blocks the runner's build too, even though it is a different folder.
+
+To avoid it, set **Editor Preferences → General → Live Coding → Startup** to
+**Manual**. Live Coding then starts only when **Ctrl+Alt+F11** is first
+pressed in a session, so an editor that has only been used for play does not
+block CI. Once Live Coding has been used, close the editor before pushing.
+
+If a run fails this way, close the editor and use **Re-run jobs** on the
+failed run.
+
+The scenario step, by contrast, can run alongside the editor. It runs the
+simulation on port **8766**, using the `-RoboApiPort` command-line override,
+while the editor's play session uses the default **8765**.
 
 ## Running the same thing locally
 
