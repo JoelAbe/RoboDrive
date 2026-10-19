@@ -33,15 +33,24 @@ void URoboSimSubsystem::Tick(float DeltaTime)
 
 	const int32 StepsTaken = Clock.Advance(DeltaTime);
 
-	// Real-time factor: how much simulated time we managed per real second.
-	// This is the number that will tell us what the lidar costs in 2e.
-	WindowRealSeconds += DeltaTime;
+	// Real-time factor: simulated seconds per wall-clock second. Measured with
+	// the wall clock, not DeltaTime. In fixed-time-step mode DeltaTime is
+	// always exactly one step however long the frame really took, so a factor
+	// built from it would read 1 at any speed.
+	const double NowWallSeconds = FPlatformTime::Seconds();
+	if (WindowStartWallSeconds < 0.0)
+	{
+		WindowStartWallSeconds = NowWallSeconds;
+	}
+
 	WindowSimSeconds += StepsTaken * Clock.GetStepSeconds();
 
-	if (WindowRealSeconds >= RealTimeFactorWindowSeconds)
+	const double WindowWallSeconds = NowWallSeconds - WindowStartWallSeconds;
+	if (WindowWallSeconds >= RealTimeFactorWindowSeconds)
 	{
-		RealTimeFactor = WindowSimSeconds / WindowRealSeconds;
-		WindowRealSeconds = 0.0;
+		RealTimeFactor = WindowSimSeconds / WindowWallSeconds;
+		WindowStartWallSeconds = NowWallSeconds;
 		WindowSimSeconds = 0.0;
 	}
+}
 }

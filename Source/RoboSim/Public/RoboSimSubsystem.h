@@ -47,8 +47,9 @@ public:
 private:
 	FSimClock Clock;
 
-	/** Rolling window for the real-time factor. */
-	double WindowRealSeconds = 0.0;
+	/** Rolling window for the real-time factor. Wall-clock start, s; negative until the first tick. */
+	double WindowStartWallSeconds = -1.0;
+	
 	double WindowSimSeconds = 0.0;
 	double RealTimeFactor = 1.0;
 
