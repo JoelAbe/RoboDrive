@@ -15,11 +15,11 @@ void ARoboPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// The operator panel, for a person watching. Skipped when nothing can be
+	// The operator view, for a person watching. Skipped when nothing can be
 	// rendered, as in a headless run, where nobody would see it.
-	if (OperatorWidgetClass != nullptr && IsLocalController() && FApp::CanEverRender())
+	if (IsLocalController() && FApp::CanEverRender())
 	{
-		OperatorWidget = CreateWidget<URoboOperatorWidget>(this, OperatorWidgetClass);
+		OperatorWidget = CreateWidget<URoboOperatorWidget>(this, URoboOperatorWidget::StaticClass());
 		if (OperatorWidget != nullptr)
 		{
 			OperatorWidget->AddToViewport();
@@ -77,6 +77,13 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
+	// Tab shows or hides the operator view. Checked directly rather than
+	// through an input action: it is a viewing aid, not a way of driving.
+	if (OperatorWidget != nullptr && WasInputKeyJustPressed(EKeys::Tab))
+	{
+		OperatorWidget->ToggleShown();
+	}
+	
 	ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn());
 	const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this);
 	if (Vehicle == nullptr || Sim == nullptr)

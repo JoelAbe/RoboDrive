@@ -59,10 +59,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (ClampMin = "0.1"))
 	double MaxYawAccelRadS2 = 3.0;
 
-	/** The operator panel: a Widget Blueprint deriving from URoboOperatorWidget. */
-	UPROPERTY(EditDefaultsOnly, Category = "Operator")
-	TSubclassOf<URoboOperatorWidget> OperatorWidgetClass;
-
 private:
 	void OnDrive(const FInputActionValue& Value);
 	void OnTurn(const FInputActionValue& Value);
