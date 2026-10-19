@@ -54,6 +54,7 @@ class Outcome:
     passed: bool
     known_failure: str | None
     detail: str
+    elapsed_s: float = math.nan
 
     @property
     def status(self) -> str:
@@ -138,7 +139,13 @@ def settle(client: SimClient, driver: str) -> None:
 
 def run_scenario(client: SimClient, path: Path, driver: str) -> Outcome:
     scenario = json.loads(path.read_text(encoding="utf-8"))
-    name = scenario.get("name", path.stem)
+    return run_scenario_data(client, scenario, path.stem, driver)
+
+
+def run_scenario_data(client: SimClient, scenario: dict, default_name: str,
+                      driver: str) -> Outcome:
+    """Run a scenario given as data, for callers that build or modify one."""
+    name = scenario.get("name", default_name)
     known_failure = scenario.get("known_failure")
 
     if "goal" not in scenario:
@@ -181,7 +188,8 @@ def run_scenario(client: SimClient, path: Path, driver: str) -> Outcome:
 
     return Outcome(name, True, known_failure,
                    f"reached goal {true_distance:.2f} m off in {elapsed:.1f} s "
-                   f"(odometry error {odometry_error:.2f} m)")
+                   f"(odometry error {odometry_error:.2f} m)",
+                   elapsed_s=elapsed)
 
 
 def main() -> int:
