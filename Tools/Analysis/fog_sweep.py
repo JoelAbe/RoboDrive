@@ -78,6 +78,7 @@ def main() -> int:
     parser.add_argument("--visibilities", nargs="+", type=float, default=DEFAULT_VISIBILITIES,
                         help="visibilities to test, m")
     parser.add_argument("--runs", type=int, default=3, help="runs per case")
+    parser.add_argument("--without-obstacles", action="store_true", help="remove the scenario's obstacles, leaving only the fog")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args()
@@ -88,6 +89,10 @@ def main() -> int:
     # against any expectation the file carries.
     base.pop("visibility_m", None)
     base.pop("known_failure", None)
+    # With nothing solid to hit, anything that still goes wrong is the fog's
+    # doing alone.
+    if args.without_obstacles:
+        base["obstacles"] = []
 
     cases: list[float | None] = [None] + args.visibilities
     rows: list[tuple[float | None, list[Outcome], list[Outcome]]] = []
@@ -124,7 +129,8 @@ def main() -> int:
             client.call("set_lidar", fog_echo_fraction=configured)
 
     print()
-    print(f"Scenario: {base.get('name', args.scenario.stem)}, {args.runs} runs per case, "
+    variant = " without obstacles" if args.without_obstacles else ""
+    print(f"Scenario: {base.get('name', args.scenario.stem)}{variant}, {args.runs} runs per case, "
           f"fog echo fraction {configured:g}. Cells: runs that reached the goal, mean time.")
     print()
     print("| Visibility | Lidar sees to | Fog echoes on | Fog echoes off |")
