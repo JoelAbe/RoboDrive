@@ -53,4 +53,3 @@ void URoboSimSubsystem::Tick(float DeltaTime)
 		WindowSimSeconds = 0.0;
 	}
 }
-}
