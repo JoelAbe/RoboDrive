@@ -6,12 +6,26 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
+#include "Blueprint/UserWidget.h"
+#include "Misc/App.h"
+#include "RoboOperatorWidget.h"
 #include "RoboSimSubsystem.h"
 
 void ARoboPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// The operator panel, for a person watching. Skipped when nothing can be
+	// rendered, as in a headless run, where nobody would see it.
+	if (OperatorWidgetClass != nullptr && IsLocalController() && FApp::CanEverRender())
+	{
+		OperatorWidget = CreateWidget<URoboOperatorWidget>(this, OperatorWidgetClass);
+		if (OperatorWidget != nullptr)
+		{
+			OperatorWidget->AddToViewport();
+		}
+	}
+	
 	if (InputMapping == nullptr)
 	{
 		UE_LOG(LogRoboDrive, Warning,

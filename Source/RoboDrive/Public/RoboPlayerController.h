@@ -6,6 +6,7 @@
 
 class UInputAction;
 class UInputMappingContext;
+class URoboOperatorWidget;
 struct FInputActionValue;
 
 /**
@@ -58,6 +59,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (ClampMin = "0.1"))
 	double MaxYawAccelRadS2 = 3.0;
 
+	/** The operator panel: a Widget Blueprint deriving from URoboOperatorWidget. */
+	UPROPERTY(EditDefaultsOnly, Category = "Operator")
+	TSubclassOf<URoboOperatorWidget> OperatorWidgetClass;
+
 private:
 	void OnDrive(const FInputActionValue& Value);
 	void OnTurn(const FInputActionValue& Value);
@@ -68,4 +73,8 @@ private:
 	/** Input for this frame, cleared after each submission. */
 	double DriveInput = 0.0;
 	double TurnInput = 0.0;
+
+	/** The panel on screen. A UPROPERTY so the garbage collector knows it is in use. */
+	UPROPERTY(Transient)
+	TObjectPtr<URoboOperatorWidget> OperatorWidget;
 };

@@ -10,10 +10,10 @@ public class RoboDrive : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "RoboSim" ,"RoboAutonomy" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "RoboSim", "RoboAutonomy" });
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		// UMG for the operator view. Slate and SlateCore are the lower-level UI for UMG
+		PrivateDependencyModuleNames.AddRange(new string[] { "UMG", "Slate", "SlateCore" });
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
