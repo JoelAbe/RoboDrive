@@ -620,6 +620,39 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		OutResult->SetStringField(TEXT("status"), TEXT("none"));
 		return true;
 	}
+
+	if (Operation == TEXT("set_lidar"))
+	{
+		if (Vehicle == nullptr)
+		{
+			OutError = TEXT("no robot in the world");
+			return false;
+		}
+
+		URoboLidarComponent* Lidar = Vehicle->FindComponentByClass<URoboLidarComponent>();
+		if (Lidar == nullptr)
+		{
+			OutError = TEXT("the robot has no lidar");
+			return false;
+		}
+
+		// Every field is optional, so a request with none simply reads the
+		// current settings. That lets a client note them and put them back.
+		double FogEchoFraction = 0.0;
+		if (Request->TryGetNumberField(TEXT("fog_echo_fraction"), FogEchoFraction))
+		{
+			if (FogEchoFraction < 0.0 || FogEchoFraction > 1.0)
+			{
+				OutError = TEXT("fog_echo_fraction must be between 0 and 1");
+				return false;
+			}
+
+			Lidar->FogEchoFraction = FogEchoFraction;
+		}
+
+		OutResult->SetNumberField(TEXT("fog_echo_fraction"), Lidar->FogEchoFraction);
+		return true;
+	}
 	
 	OutError = FString::Printf(TEXT("unknown op '%s'"), *Operation);
 	return false;
