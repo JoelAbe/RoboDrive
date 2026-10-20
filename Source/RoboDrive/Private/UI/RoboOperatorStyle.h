@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateNoResource.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "Fonts/SlateFontInfo.h"
 #include "Styling/CoreStyle.h"
@@ -11,10 +12,10 @@
 /**
  * The operator view's look, in one place.
  *
- * A warm graphite base, so the panels sit quietly over the world. Colour is
- * kept for meaning: teal when things are running normally, amber for anything
- * worth watching, coral for stops and failures, violet for an external client
- * driving. Colours are written as sRGB hex, the way a designer would hand
+ * A deep navy base, so the panels sit quietly over the world. Colour is kept
+ * for meaning: green when things are running normally, amber for anything
+ * worth watching, red for stops and failures, violet for an external client
+ * driving, and blue for actions you can take. Colours are written as sRGB hex, the way a designer would hand
  * them over, and converted to the linear colour Slate works in.
  */
 namespace RoboOperatorStyle
@@ -42,29 +43,35 @@ namespace RoboOperatorStyle
 	inline constexpr double LidarViewRangeM = 5.0;
 
 	// Surfaces
-	inline FLinearColor PanelFill()    { return Hex(TEXT("141518E6")); }
-	inline FLinearColor PanelOutline() { return Hex(TEXT("2B2D31")); }
-	inline FLinearColor Divider()      { return Hex(TEXT("25272B")); }
+	inline FLinearColor PanelFill()    { return Hex(TEXT("131A26E8")); }
+	inline FLinearColor PanelOutline() { return Hex(TEXT("27324A")); }
+	inline FLinearColor Divider()      { return Hex(TEXT("212B3D")); }
+
+	/** Behind the lidar view's drawing: darker than the panels, and solid. */
+	inline FLinearColor ViewFill()     { return Hex(TEXT("0B111C")); }
 
 	// Text
-	inline FSlateColor TextPrimary() { return Hex(TEXT("ECE8E1")); }
-	inline FSlateColor TextMuted()   { return Hex(TEXT("8E8A82")); }
-	inline FSlateColor TextFaint()   { return Hex(TEXT("5F5C56")); }
+	inline FSlateColor TextPrimary() { return Hex(TEXT("E6EDF3")); }
+	inline FSlateColor TextMuted()   { return Hex(TEXT("8B95A7")); }
+	inline FSlateColor TextFaint()   { return Hex(TEXT("566178")); }
 
 	/** Text on a filled button, dark so it reads on any of the meaning colours. */
-	inline FSlateColor TextOnFill()  { return Hex(TEXT("141518")); }
+	inline FSlateColor TextOnFill()  { return Hex(TEXT("0B111C")); }
 
 	/** The fill of a button that is not selected. */
-	inline FSlateColor ControlFill() { return Hex(TEXT("2B2D31")); }
+	inline FSlateColor ControlFill() { return Hex(TEXT("243149")); }
 
 	// Meaning
-	inline FSlateColor Normal()    { return Hex(TEXT("3CC8B4")); }
-	inline FSlateColor Attention() { return Hex(TEXT("E0A84A")); }
-	inline FSlateColor Stop()      { return Hex(TEXT("E8644F")); }
-	inline FSlateColor External()  { return Hex(TEXT("9C8CF2")); }
+	inline FSlateColor Normal()    { return Hex(TEXT("2FCB6E")); }
+	inline FSlateColor Attention() { return Hex(TEXT("F5A524")); }
+	inline FSlateColor Stop()      { return Hex(TEXT("EF4444")); }
+	inline FSlateColor External()  { return Hex(TEXT("A78BFA")); }
+
+	/** Actions: things that do something once, such as restarting, rather than a state. */
+	inline FSlateColor Accent()    { return Hex(TEXT("3B82F6")); }
 
 	/** Lidar returns, close to the orange of the rays drawn in the world. */
-	inline FSlateColor LidarReturn() { return Hex(TEXT("E8823A")); }
+	inline FSlateColor LidarReturn() { return Hex(TEXT("F0883E")); }
 
 	// Fonts. The engine's default family, so nothing extra has to be shipped.
 	// Numbers are monospaced so they do not jitter sideways as they change.
@@ -88,7 +95,7 @@ namespace RoboOperatorStyle
 	/** The outlined box that sets ground truth apart. */
 	inline const FSlateBrush* TruthBrush()
 	{
-		static const FSlateRoundedBoxBrush Brush(Hex(TEXT("E0A84A0F")), 6.0f, Hex(TEXT("E0A84A55")), 1.0f);
+		static const FSlateRoundedBoxBrush Brush(Hex(TEXT("F5A52412")), 6.0f, Hex(TEXT("F5A52466")), 1.0f);
 		return &Brush;
 	}
 
@@ -100,20 +107,30 @@ namespace RoboOperatorStyle
 	}
 
 	/**
-	 * Buttons are drawn white and tinted per button, so one style serves them
-	 * all: a selected mode, an unselected one, and the stop. The brushes differ
-	 * only in opacity, which is what makes hovering and pressing visible.
+	 * A button that draws nothing itself. The operator view's buttons draw
+	 * their own shape inside, so its colour can follow both what the button
+	 * means and whether the mouse is over it.
 	 */
-	inline const FButtonStyle& ButtonStyle()
+	inline const FButtonStyle& BareButtonStyle()
 	{
 		static const FButtonStyle Style = FButtonStyle()
-			.SetNormal(FSlateRoundedBoxBrush(FLinearColor(1.0f, 1.0f, 1.0f, 0.85f), 6.0f))
-			.SetHovered(FSlateRoundedBoxBrush(FLinearColor::White, 6.0f))
-			.SetPressed(FSlateRoundedBoxBrush(FLinearColor(1.0f, 1.0f, 1.0f, 0.65f), 6.0f))
+			.SetNormal(FSlateNoResource())
+			.SetHovered(FSlateNoResource())
+			.SetPressed(FSlateNoResource())
 			.SetNormalPadding(FMargin(0.0f))
 			.SetPressedPadding(FMargin(0.0f));
 		return Style;
 	}
+
+	/** A white rounded shape, tinted per use: a button's outline and fill. */
+	inline const FSlateBrush* ButtonShapeBrush()
+	{
+		static const FSlateRoundedBoxBrush Brush(FLinearColor::White, 6.0f);
+		return &Brush;
+	}
+
+	/** An outlined action button's fill: the panel's navy, but solid. */
+	inline FSlateColor ActionFill() { return Hex(TEXT("15203A")); }
 
 	/**
 	 * Sliders, drawn white and tinted per slider like the buttons: the bar in

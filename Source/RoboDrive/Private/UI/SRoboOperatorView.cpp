@@ -10,6 +10,7 @@
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
+#include "Widgets/Layout/SWrapBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SNullWidget.h"
 #include "Widgets/Text/STextBlock.h"
@@ -221,48 +222,110 @@ namespace
 	}
 
 	/**
+	 * A colour as the button shows it this frame: lighter while the mouse is
+	 * over it, darker while it is held down. The shift is large enough to see
+	 * on any colour, from the dark navy of an idle control to a bright fill.
+	 */
+	FLinearColor OperatorButtonShade(const FLinearColor& Base, const TWeakPtr<SButton>& WeakButton)
+	{
+		const TSharedPtr<SButton> Button = WeakButton.Pin();
+		if (Button.IsValid() && Button->IsPressed())
+		{
+			return FLinearColor(Base.R * 0.7f, Base.G * 0.7f, Base.B * 0.7f, Base.A);
+		}
+
+		if (Button.IsValid() && Button->IsHovered())
+		{
+			const FLinearColor Lighter = Base + (FLinearColor::White - Base) * 0.25f;
+			return FLinearColor(Lighter.R, Lighter.G, Lighter.B, Base.A);
+		}
+
+		return Base;
+	}
+
+	/**
 	 * A button with a label and the key that does the same thing, so the
 	 * shortcut is learned by using the button.
+	 *
+	 * The button itself draws nothing. Inside it, an outer rounded shape in
+	 * the outline colour holds an inner one in the fill colour, one unit
+	 * smaller, so a button can be solid (outline and fill the same) or
+	 * outlined (a bright edge around a dark fill). The fill follows the mouse.
 	 *
 	 * Not focusable: a focusable button would take the keyboard after a click,
 	 * and the keys that drive the robot would stop reaching the game.
 	 */
+	TSharedRef<SWidget> OperatorButtonWith(const TAttribute<FText>& Label, const FText& Key,
+		const TAttribute<FSlateColor>& Fill, const TAttribute<FSlateColor>& Outline,
+		const TAttribute<FSlateColor>& TextColour, FOnClicked OnClicked)
+	{
+		const TSharedRef<SButton> Button = SNew(SButton)
+			.ButtonStyle(&RoboOperatorStyle::BareButtonStyle())
+			.ContentPadding(FMargin(0.0f))
+			.IsFocusable(false)
+			.OnClicked(OnClicked);
+
+		// Weak, because the button holds this lambda through its content: a
+		// strong pointer back to the button would keep both alive forever.
+		const TWeakPtr<SButton> WeakButton = Button;
+
+		Button->SetContent(
+			SNew(SBorder)
+			.BorderImage(RoboOperatorStyle::ButtonShapeBrush())
+			.BorderBackgroundColor(Outline)
+			.Padding(1.0f)
+			[
+				SNew(SBorder)
+				.BorderImage(RoboOperatorStyle::ButtonShapeBrush())
+				.BorderBackgroundColor_Lambda([Fill, WeakButton]
+				{
+					return FSlateColor(OperatorButtonShade(Fill.Get().GetSpecifiedColor(), WeakButton));
+				})
+				.Padding(FMargin(11.0f, 4.0f))
+				[
+					SNew(SHorizontalBox)
+
+					+ SHorizontalBox::Slot()
+					.AutoWidth()
+					.VAlign(VAlign_Center)
+					[
+						SNew(STextBlock)
+						.Text(Label)
+						.Font(RoboOperatorStyle::TitleFont())
+						.ColorAndOpacity(TextColour)
+					]
+
+					// Buttons without a shortcut collapse this, so the label stays centred.
+					+ SHorizontalBox::Slot()
+					.AutoWidth()
+					.VAlign(VAlign_Center)
+					.Padding(8.0f, 0.0f, 0.0f, 0.0f)
+					[
+						SNew(STextBlock)
+						.Text(Key)
+						.Font(RoboOperatorStyle::LabelFont())
+						.ColorAndOpacity(TextColour)
+						.Visibility(Key.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
+					]
+				]
+			]);
+
+		return Button;
+	}
+
+	/** A solid button: a state such as a mode, or the stop. */
 	TSharedRef<SWidget> OperatorButton(const TAttribute<FText>& Label, const FText& Key,
 		const TAttribute<FSlateColor>& Fill, const TAttribute<FSlateColor>& TextColour,
 		FOnClicked OnClicked)
 	{
-		return SNew(SButton)
-			.ButtonStyle(&RoboOperatorStyle::ButtonStyle())
-			.ButtonColorAndOpacity(Fill)
-			.ContentPadding(FMargin(12.0f, 5.0f))
-			.IsFocusable(false)
-			.OnClicked(OnClicked)
-			[
-				SNew(SHorizontalBox)
+		return OperatorButtonWith(Label, Key, Fill, Fill, TextColour, OnClicked);
+	}
 
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				[
-					SNew(STextBlock)
-					.Text(Label)
-					.Font(RoboOperatorStyle::TitleFont())
-					.ColorAndOpacity(TextColour)
-				]
-
-				// Buttons without a shortcut collapse this, so the label stays centred.
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				.Padding(8.0f, 0.0f, 0.0f, 0.0f)
-				[
-					SNew(STextBlock)
-					.Text(Key)
-					.Font(RoboOperatorStyle::LabelFont())
-					.ColorAndOpacity(TextColour)
-					.Visibility(Key.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
-				]
-			];
+	/** An outlined blue button: an action that does something once, such as Restart. */
+	TSharedRef<SWidget> OperatorActionButton(const TAttribute<FText>& Label, const FText& Key, FOnClicked OnClicked)
+	{
+		return OperatorButtonWith(Label, Key, RoboOperatorStyle::ActionFill(), RoboOperatorStyle::Accent(),
+			RoboOperatorStyle::TextPrimary(), OnClicked);
 	}
 
 	/** A section heading inside a panel. */
@@ -989,8 +1052,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 					.HAlign(HAlign_Left)
 					.Padding(0.0f, 10.0f, 0.0f, 0.0f)
 					[
-						OperatorButton(INVTEXT("Reset odometry to the truth"), FText::GetEmpty(),
-							ControlFill(), TextPrimary(),
+						OperatorActionButton(INVTEXT("Reset odometry to the truth"), FText::GetEmpty(),
 							FOnClicked::CreateLambda([this]
 							{
 								if (ARoboPlayerController* Controller = OperatorController(Player))
@@ -1315,12 +1377,12 @@ TSharedRef<SWidget> SRoboOperatorView::MakeScenarioPanel()
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
 				[
-					OperatorButton(
+					OperatorActionButton(
 						TAttribute<FText>::CreateLambda([this]
 						{
 							return bScenarioListOpen ? INVTEXT("Close") : INVTEXT("Choose");
 						}),
-						FText::GetEmpty(), ControlFill(), TextPrimary(),
+						FText::GetEmpty(),
 						FOnClicked::CreateLambda([this]
 						{
 							bScenarioListOpen = !bScenarioListOpen;
@@ -1340,7 +1402,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeScenarioPanel()
 				.AutoWidth()
 				.Padding(6.0f, 0.0f, 0.0f, 0.0f)
 				[
-					OperatorButton(INVTEXT("Restart"), INVTEXT("R"), ControlFill(), TextPrimary(),
+					OperatorActionButton(INVTEXT("Restart"), INVTEXT("R"),
 						FOnClicked::CreateLambda([this]
 						{
 							if (ARoboPlayerController* Controller = OperatorController(Player))
@@ -1551,10 +1613,13 @@ TSharedRef<SWidget> SRoboOperatorView::MakeLidarPanel()
 				.AutoHeight()
 				.Padding(0.0f, 8.0f, 0.0f, 0.0f)
 				[
-					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().AutoWidth() [ KeyEntry(INVTEXT("Returns"), LidarReturn()) ]
-					+ SHorizontalBox::Slot().AutoWidth() [ KeyEntry(INVTEXT("Goal, as believed"), Normal()) ]
-					+ SHorizontalBox::Slot().AutoWidth() [ KeyEntry(INVTEXT("Chosen heading"), External()) ]
+					// Wraps onto a second line when the column is too narrow
+					// for all three, rather than running past the panel's edge.
+					SNew(SWrapBox)
+					.UseAllottedSize(true)
+					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Returns"), LidarReturn()) ]
+					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Goal, as believed"), Normal()) ]
+					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Chosen heading"), External()) ]
 				]
 			]
 		];

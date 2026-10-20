@@ -62,7 +62,7 @@ int32 SRoboLidarView::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedG
 	// A solid background: through a translucent one, the paths and rays drawn
 	// in the world behind the panel show through and look like returns.
 	FSlateDrawElement::MakeBox(OutDrawElements, BackgroundLayer, AllottedGeometry.ToPaintGeometry(),
-		RoboOperatorStyle::SolidBrush(), ESlateDrawEffect::None, RoboOperatorStyle::Hex(TEXT("0E0F11")));
+		RoboOperatorStyle::SolidBrush(), ESlateDrawEffect::None, RoboOperatorStyle::ViewFill());
 
 	auto DrawLines = [&](const TArray<FVector2f>& Points, const FLinearColor& Colour, float Thickness, int32 Layer)
 	{

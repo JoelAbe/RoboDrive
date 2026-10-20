@@ -312,15 +312,15 @@ void ARoboPlayerController::DrawGoalMarker() const
 		FloorZ = Hit.ImpactPoint.Z;
 	}
 
-	// The panel's colours: amber under way, teal reached, coral given up.
-	FColor Colour = FColor::FromHex(TEXT("E0A84A"));
+	// The panel's colours: amber under way, green reached, red given up.
+	FColor Colour = FColor::FromHex(TEXT("F5A524"));
 	if (Mission->GetStatus() == EMissionStatus::Arrived)
 	{
-		Colour = FColor::FromHex(TEXT("3CC8B4"));
+		Colour = FColor::FromHex(TEXT("2FCB6E"));
 	}
 	else if (Mission->GetStatus() == EMissionStatus::Failed)
 	{
-		Colour = FColor::FromHex(TEXT("E8644F"));
+		Colour = FColor::FromHex(TEXT("EF4444"));
 	}
 
 	// Not persistent: drawn for one frame, every frame, so it follows the
