@@ -15,6 +15,15 @@ public class RoboSim : ModuleRules
             }
         );
 
+        // Json reads scenarios, which arrive as parsed JSON objects. Private,
+        // because RoboSim's public headers only forward-declare FJsonObject.
+        PrivateDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "Json"
+            }
+        );
+
         /*PrivateDependencyModuleNames.AddRange(
             new string[]
             {
