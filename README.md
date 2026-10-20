@@ -2,6 +2,8 @@
 
 [![Simulation tests](https://github.com/JoelAbe/RoboDrive/actions/workflows/simulation-tests.yml/badge.svg)](https://github.com/JoelAbe/RoboDrive/actions/workflows/simulation-tests.yml)
 
+![The robot steering round a post on the slalom, with the operator view: telemetry on the left, the lidar view of what the brain sees at the bottom left, and tuning on the right](docs/images/github/slalom-fullscreen.jpg)
+
 A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, an external API, and a scenario test suite that runs in CI.
@@ -138,6 +140,8 @@ published formulas be used as written.
 All design decisions are recorded in [docs/decisions](docs/decisions/README.md).
 
 ## Operator view
+
+<!-- VIDEO: on github.com, edit this file and drag docs/images/github/slalom-demo-1280.mp4 onto the next line. -->
 
 While playing, panels over the game view show who is driving, command against
 actual motion, what the brain is doing and why, the mission, the sensor

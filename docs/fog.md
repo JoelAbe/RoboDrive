@@ -36,6 +36,16 @@ harness judges the result against ground truth.
 The scenario is the slalom: three posts on the line to a goal 10 m ahead,
 60 s allowed. A second sweep removes the posts and keeps everything else.
 
+## In one comparison
+
+The slalom at 10 m visibility, the same start, one setting changed. With fog
+echoes on, the robot is boxed in by echoes close around it and barely moves.
+With them off, leaving only the shorter range, it drives through.
+
+<!-- VIDEO: on github.com, edit this file and drag docs/images/github/slalom-fog-default-1280.mp4 onto the next line. -->
+
+<!-- VIDEO: on github.com, edit this file and drag docs/images/github/slalom-fog-echoless-1280.mp4 onto the next line. -->
+
 ## Results
 
 ### The slalom
