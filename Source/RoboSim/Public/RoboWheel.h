@@ -146,7 +146,7 @@ public:
 
 	/** Draw the trace and contact point during play. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDrawDebug = true;
+	bool bDrawDebug = false;
 
 	
 	/** Apply drive and lateral friction at the contact patch found by UpdateSuspension. */

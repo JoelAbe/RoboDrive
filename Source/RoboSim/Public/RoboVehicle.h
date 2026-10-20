@@ -55,7 +55,7 @@ public:
 
 	/** Draw the active source and command above the robot. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDrawDebugState = true;
+	bool bDrawDebugState = false;
 	
 	/** Total mass of the robot, kg. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Robot", meta = (ClampMin = "0.1", Units = "kg"))

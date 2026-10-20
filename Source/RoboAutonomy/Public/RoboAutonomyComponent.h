@@ -63,7 +63,11 @@ public:
 	FAvoidanceSettings Avoidance;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDrawReadout = true;
+	bool bDrawReadout = false;
+
+	/** Draw the heading the brain chose, as an arrow from the robot. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDrawChosenHeading = true;
 
 	/** What the brain decided most recently. For display; nothing should steer by it. */
 	const FBrainOutput& GetLastOutput() const { return LastOutput; }

@@ -62,7 +62,7 @@ public:
 	int32 RandomSeed = 7777;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDrawReadout = true;
+	bool bDrawReadout = false;
 
 protected:
 	virtual void BeginPlay() override;

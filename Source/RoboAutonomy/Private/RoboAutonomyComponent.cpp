@@ -149,21 +149,21 @@ void URoboAutonomyComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 				*UEnum::GetDisplayValueAsText(LastOutput.Status).ToString(),
 				LastOutput.Command.Linear, LastOutput.Command.Angular),
 			Vehicle, FColor::Green, 0.0f, true);
+	}
 
-		if (LastOutput.ChosenHeadingRad.IsSet())
-		{
-			// The heading is relative to the robot, in REP-103. Convert it into
-			// the robot's local Unreal frame, then rotate it into the world by the
-			// robot's transform. Using the true transform here is fine: this is
-			// drawing for a person watching, never something the brain sees.
-			const double HeadingRad = LastOutput.ChosenHeadingRad.GetValue();
-			const FVector LocalDirection = RoboFrames::PositionToUe(
-				FVector(FMath::Cos(HeadingRad), FMath::Sin(HeadingRad), 0.0)).GetSafeNormal();
-			const FVector WorldDirection = Vehicle->GetActorQuat().RotateVector(LocalDirection);
-			const FVector Start = Vehicle->GetActorLocation() + FVector(0.0, 0.0, 30.0);
+	if (bDrawChosenHeading && LastOutput.ChosenHeadingRad.IsSet())
+	{
+		// The heading is relative to the robot, in REP-103. Convert it into
+		// the robot's local Unreal frame, then rotate it into the world by the
+		// robot's transform. Using the true transform here is fine: this is
+		// drawing for a person watching, never something the brain sees.
+		const double HeadingRad = LastOutput.ChosenHeadingRad.GetValue();
+		const FVector LocalDirection = RoboFrames::PositionToUe(
+			FVector(FMath::Cos(HeadingRad), FMath::Sin(HeadingRad), 0.0)).GetSafeNormal();
+		const FVector WorldDirection = Vehicle->GetActorQuat().RotateVector(LocalDirection);
+		const FVector Start = Vehicle->GetActorLocation() + FVector(0.0, 0.0, 30.0);
 
-			DrawDebugDirectionalArrow(GetWorld(), Start, Start + WorldDirection * 150.0,
-				25.0f, FColor::Purple, false, 0.0f, 0, 3.0f);
-		}
+		DrawDebugDirectionalArrow(GetWorld(), Start, Start + WorldDirection * 150.0,
+			25.0f, FColor::Purple, false, 0.0f, 0, 3.0f);
 	}
 }

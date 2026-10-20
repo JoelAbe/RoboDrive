@@ -75,7 +75,7 @@ public:
 	bool bDrawTrails = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDrawReadout = true;
+	bool bDrawReadout = false;
 
 	/** Wait for the robot to settle before starting, so the drop is not counted as drift. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Odometry")
