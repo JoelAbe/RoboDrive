@@ -15,15 +15,5 @@ public class RoboAutonomy : ModuleRules
                 "RoboSim"
             }
         );
-
-        /*PrivateDependencyModuleNames.AddRange(
-            new string[]
-            {
-                "CoreUObject",
-                "Engine",
-                "Slate",
-                "SlateCore"
-            }
-        );*/
     }
 }

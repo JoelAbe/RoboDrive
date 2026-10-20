@@ -21,15 +21,5 @@ public class RoboSim : ModuleRules
                 "Json"
             }
         );
-
-        /*PrivateDependencyModuleNames.AddRange(
-            new string[]
-            {
-                "CoreUObject",
-                "Engine",
-                "Slate",
-                "SlateCore"
-            }
-        );*/
     }
 }

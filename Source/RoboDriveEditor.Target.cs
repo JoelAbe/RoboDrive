@@ -1,11 +1,8 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 using UnrealBuildTool;
-using System.Collections.Generic;
 
 public class RoboDriveEditorTarget : TargetRules
 {
-	public RoboDriveEditorTarget( TargetInfo Target) : base(Target)
+	public RoboDriveEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V7;
