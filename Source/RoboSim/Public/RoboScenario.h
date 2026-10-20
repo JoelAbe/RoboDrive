@@ -50,6 +50,13 @@ public:
 	 */
 	bool Restart(FString& OutError);
 
+	/**
+	 * Remove the current scenario entirely: its obstacles, goal and fog go,
+	 * and the robot returns to where it spawned. The world is left as the
+	 * level made it. Simulation time keeps running, as with Restart.
+	 */
+	bool Unload(FString& OutError);
+
 	/** Return the robot to where it spawned, stopped, with fresh dead reckoning. */
 	bool ResetRobot(FString& OutError);
 

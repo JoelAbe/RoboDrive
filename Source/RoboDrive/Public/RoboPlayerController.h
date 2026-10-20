@@ -36,6 +36,9 @@ public:
 
 	/** Start the current scenario again, or with none loaded return the robot to its spawn. */
 	void RestartScenario();
+
+	/** Remove the current scenario, leaving the level as it was built, with the robot at its spawn. */
+	void UnloadScenario();
 	
 protected:
 	virtual void BeginPlay() override;

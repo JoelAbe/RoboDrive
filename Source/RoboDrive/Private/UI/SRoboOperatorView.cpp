@@ -15,6 +15,16 @@
 
 namespace
 {
+	/**
+	 * A value with anything that would round to zero made exactly zero, so it
+	 * prints as "0.00" rather than "-0.00", which reads as a direction when
+	 * there is none. Resolution is the smallest step the display shows.
+	 */
+	double OperatorClean(double Value, double Resolution)
+	{
+		return FMath::Abs(Value) < 0.5 * Resolution ? 0.0 : Value;
+	}
+
 	/** Shown in place of a value that does not exist, such as speed with no robot. */
 	FText OperatorNoValue()
 	{
@@ -696,7 +706,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 						TAttribute<FText>::CreateLambda([this]
 						{
 							return Telemetry.bHasRobot
-								? FText::FromString(FString::Printf(TEXT("%.2f m/s"), Telemetry.CommandLinearMS))
+								? FText::FromString(FString::Printf(TEXT("%.2f m/s"), OperatorClean(Telemetry.CommandLinearMS, 0.01)))
 								: OperatorNoValue();
 						}),
 						TextPrimary(), NumberFont())
@@ -708,7 +718,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 						TAttribute<FText>::CreateLambda([this]
 						{
 							return Telemetry.bHasRobot
-								? FText::FromString(FString::Printf(TEXT("%.2f rad/s"), Telemetry.CommandAngularRadS))
+								? FText::FromString(FString::Printf(TEXT("%.2f rad/s"), OperatorClean(Telemetry.CommandAngularRadS, 0.01)))
 								: OperatorNoValue();
 						}),
 						TextPrimary(), NumberFont())
@@ -720,7 +730,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 						TAttribute<FText>::CreateLambda([this]
 						{
 							return Telemetry.bHasRobot
-								? FText::FromString(FString::Printf(TEXT("%.2f m/s"), Telemetry.ActualLinearMS))
+								? FText::FromString(FString::Printf(TEXT("%.2f m/s"), OperatorClean(Telemetry.ActualLinearMS, 0.01)))
 								: OperatorNoValue();
 						}),
 						TextPrimary(), NumberFont())
@@ -732,7 +742,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 						TAttribute<FText>::CreateLambda([this]
 						{
 							return Telemetry.bHasRobot
-								? FText::FromString(FString::Printf(TEXT("%.2f rad/s"), Telemetry.ActualYawRateRadS))
+								? FText::FromString(FString::Printf(TEXT("%.2f rad/s"), OperatorClean(Telemetry.ActualYawRateRadS, 0.01)))
 								: OperatorNoValue();
 						}),
 						TextPrimary(), NumberFont())
@@ -912,7 +922,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 								TAttribute<FText>::CreateLambda([this]
 								{
 									return Telemetry.bHasOdometry
-										? FText::FromString(FString::Printf(TEXT("%.1f deg"), Telemetry.HeadingErrorDeg))
+										? FText::FromString(FString::Printf(TEXT("%.1f deg"), OperatorClean(Telemetry.HeadingErrorDeg, 0.1)))
 										: OperatorNoValue();
 								}),
 								TextPrimary(), NumberFont())
@@ -1207,29 +1217,29 @@ TSharedRef<SWidget> SRoboOperatorView::MakeScenarioPanel()
 		[
 			SNew(SVerticalBox)
 
-			// The current scenario, and the controls for it.
+			// The current scenario, on a line of its own so a long name has room.
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			[
-				SNew(SHorizontalBox)
+				OperatorField(INVTEXT("Scenario"),
+					TAttribute<FText>::CreateLambda([this]
+					{
+						return Telemetry.bHasScenario ? FText::FromString(Telemetry.ScenarioName) : INVTEXT("None loaded");
+					}),
+					TextPrimary(), BodyFont())
+			]
 
-				+ SHorizontalBox::Slot()
-				.FillWidth(1.0f)
-				.VAlign(VAlign_Center)
-				[
-					OperatorField(INVTEXT("Scenario"),
-						TAttribute<FText>::CreateLambda([this]
-						{
-							return Telemetry.bHasScenario ? FText::FromString(Telemetry.ScenarioName) : INVTEXT("None loaded");
-						}),
-						TextPrimary(), BodyFont())
-				]
+			// And the controls for it, beneath.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 10.0f, 0.0f, 0.0f)
+			[
+				SNew(SHorizontalBox)
 
 				// Opens and closes the list below, like a dropdown that pushes
 				// the panel down rather than floating over it.
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
-				.VAlign(VAlign_Center)
 				[
 					OperatorButton(
 						TAttribute<FText>::CreateLambda([this]
@@ -1254,7 +1264,6 @@ TSharedRef<SWidget> SRoboOperatorView::MakeScenarioPanel()
 				// goes back to where it spawned.
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
-				.VAlign(VAlign_Center)
 				.Padding(6.0f, 0.0f, 0.0f, 0.0f)
 				[
 					OperatorButton(INVTEXT("Restart"), INVTEXT("R"), ControlFill(), TextPrimary(),
@@ -1307,6 +1316,25 @@ void SRoboOperatorView::RefreshScenarioList()
 	}
 
 	ScenarioList->ClearChildren();
+
+	// None first: the level as it was built, with no obstacles, goal or fog.
+	ScenarioList->AddSlot()
+	.AutoHeight()
+	.Padding(0.0f, 0.0f, 0.0f, 4.0f)
+	[
+		OperatorChoice(INVTEXT("None"),
+			TAttribute<bool>::CreateLambda([this] { return !Telemetry.bHasScenario; }),
+			FOnClicked::CreateLambda([this]
+			{
+				if (ARoboPlayerController* Controller = OperatorController(Player))
+				{
+					Controller->UnloadScenario();
+				}
+				ScenarioError = FText::GetEmpty();
+				bScenarioListOpen = false;
+				return FReply::Handled();
+			}))
+	];
 
 	const TArray<FString> Files = RoboScenarioFiles::List();
 	if (Files.IsEmpty())

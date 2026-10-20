@@ -256,6 +256,34 @@ bool URoboScenarioSubsystem::Restart(FString& OutError)
 	return Load(Scenario, OutError, CurrentName);
 }
 
+bool URoboScenarioSubsystem::Unload(FString& OutError)
+{
+	ClearObstacles();
+
+	if (URoboMissionSubsystem* Mission = GetWorld()->GetSubsystem<URoboMissionSubsystem>())
+	{
+		Mission->ClearGoal();
+	}
+
+	if (URoboWeatherSubsystem* Weather = GetWorld()->GetSubsystem<URoboWeatherSubsystem>())
+	{
+		Weather->SetClear();
+	}
+
+	// Forgotten, so Restart afterwards only returns the robot to its spawn
+	// rather than bringing the scenario back.
+	if (Current.IsValid())
+	{
+		UE_LOG(LogRoboSim, Log, TEXT("Scenario '%s' unloaded"), *CurrentName);
+	}
+	Current.Reset();
+	CurrentName.Reset();
+
+	// Last, because resetting the robot also clears the goal marker and the
+	// paths drawn so far.
+	return ResetRobot(OutError);
+}
+
 bool URoboScenarioSubsystem::ResetRobot(FString& OutError)
 {
 	ARoboVehicle* Vehicle = FindVehicle();

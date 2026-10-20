@@ -603,6 +603,24 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		return true;
 	}
 
+	if (Operation == TEXT("unload_scenario"))
+	{
+		URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(this);
+		if (Scenarios == nullptr)
+		{
+			OutError = TEXT("scenario subsystem unavailable");
+			return false;
+		}
+
+		if (!Scenarios->Unload(OutError))
+		{
+			return false;
+		}
+
+		OutResult->SetBoolField(TEXT("unloaded"), true);
+		return true;
+	}
+
 	if (Operation == TEXT("restart_scenario"))
 	{
 		URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(this);

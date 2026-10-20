@@ -206,6 +206,18 @@ bool ARoboPlayerController::LoadScenarioFile(const FString& FileName, FString& O
 	return true;
 }
 
+void ARoboPlayerController::UnloadScenario()
+{
+	if (URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(this))
+	{
+		FString Error;
+		if (!Scenarios->Unload(Error))
+		{
+			UE_LOG(LogRoboDrive, Warning, TEXT("Could not unload the scenario: %s"), *Error);
+		}
+	}
+}
+
 void ARoboPlayerController::RestartScenario()
 {
 	if (URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(this))
