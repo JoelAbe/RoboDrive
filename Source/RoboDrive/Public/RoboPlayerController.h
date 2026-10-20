@@ -39,6 +39,13 @@ public:
 
 	/** Remove the current scenario, leaving the level as it was built, with the robot at its spawn. */
 	void UnloadScenario();
+
+	/**
+	 * Set the robot's odometry back to its true pose: the operator correcting
+	 * the robot's belief, as a pose estimate does in ROS. The brain still
+	 * never reads the truth itself.
+	 */
+	void ResetOdometry();
 	
 protected:
 	virtual void BeginPlay() override;

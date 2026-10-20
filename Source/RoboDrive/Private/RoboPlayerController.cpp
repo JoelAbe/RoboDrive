@@ -12,6 +12,7 @@
 #include "DrawDebugHelpers.h"
 #include "RoboFrames.h"
 #include "RoboMission.h"
+#include "RoboOdometryComponent.h"
 #include "Dom/JsonObject.h"
 #include "Misc/App.h"
 #include "Misc/Paths.h"
@@ -224,6 +225,18 @@ bool ARoboPlayerController::LoadScenarioFile(const FString& FileName, FString& O
 	return true;
 }
 
+void ARoboPlayerController::ResetOdometry()
+{
+	if (const ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn()))
+	{
+		if (URoboOdometryComponent* Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>())
+		{
+			// Also restarts the drawn paths, which start again from here.
+			Odometry->ResetOdometry();
+		}
+	}
+}
+
 void ARoboPlayerController::UnloadScenario()
 {
 	if (URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(this))
@@ -316,4 +329,4 @@ void ARoboPlayerController::DrawGoalMarker() const
 		FVector(GoalUU.X, GoalUU.Y, FloorZ),
 		FVector(GoalUU.X, GoalUU.Y, FloorZ + 50.0),
 		Goal.ToleranceM * RoboFrames::UUPerMeter, 32, Colour, false, -1.0f, 0, 2.0f);
-}[[]]
+}

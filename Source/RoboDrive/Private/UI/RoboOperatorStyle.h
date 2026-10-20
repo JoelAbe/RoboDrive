@@ -34,9 +34,10 @@ namespace RoboOperatorStyle
 	inline constexpr float PanelPadding = 18.0f;
 
 	// The lidar view: its drawing area, and how much of the world it shows.
-	// Most of what matters to avoidance is within a few metres, so the view
-	// shows 5 m ahead rather than the lidar's full 12 m.
-	inline constexpr float LidarViewWidth = 320.0f;
+	// It sits under the robot panel, so it is exactly as wide as the column
+	// inside its 12-unit padding. Most of what matters to avoidance is within
+	// a few metres, so it shows 5 m ahead rather than the lidar's full 12 m.
+	inline constexpr float LidarViewWidth = ColumnWidth - 2.0f * 12.0f;
 	inline constexpr float LidarViewHeight = 200.0f;
 	inline constexpr double LidarViewRangeM = 5.0;
 

@@ -391,26 +391,44 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 			SNew(SHorizontalBox)
 			.Visibility(EVisibility::SelfHitTestInvisible)
 
-			// Only as tall as its contents, so it covers no more than it must.
+			// The robot at the top of the left column and the lidar view at
+			// its foot, each only as tall as its contents, with the world
+			// showing through the gap between them.
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
-			.VAlign(VAlign_Top)
 			[
 				SNew(SBox)
 				.WidthOverride(RoboOperatorStyle::ColumnWidth)
 				[
-					MakeRobotPanel()
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						MakeRobotPanel()
+					]
+
+					+ SVerticalBox::Slot()
+					.FillHeight(1.0f)
+					[
+						SNullWidget::NullWidget
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.0f, 12.0f, 0.0f, 0.0f)
+					[
+						MakeLidarPanel()
+					]
 				]
 			]
 
-			// The world shows through here, with only the lidar view at the
-			// bottom, small, where it covers the least of what matters.
+			// The world shows through here. Nothing is drawn, so nothing is
+			// hidden: the paths the robot leaves stay visible.
 			+ SHorizontalBox::Slot()
 			.FillWidth(1.0f)
-			.HAlign(HAlign_Center)
-			.VAlign(VAlign_Bottom)
 			[
-				MakeLidarPanel()
+				SNullWidget::NullWidget
 			]
 
 			// Choosing a scenario above, tuning below.
@@ -960,6 +978,27 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 								}),
 								TextPrimary(), NumberFont())
 						]
+					]
+
+					// The operator, who can see the truth, telling the robot
+					// where it really is: what an operator does in ROS with
+					// RViz's "2D Pose Estimate". The brain still never reads
+					// the truth itself; it is simply given a corrected belief.
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.HAlign(HAlign_Left)
+					.Padding(0.0f, 10.0f, 0.0f, 0.0f)
+					[
+						OperatorButton(INVTEXT("Reset odometry to the truth"), FText::GetEmpty(),
+							ControlFill(), TextPrimary(),
+							FOnClicked::CreateLambda([this]
+							{
+								if (ARoboPlayerController* Controller = OperatorController(Player))
+								{
+									Controller->ResetOdometry();
+								}
+								return FReply::Handled();
+							}))
 					]
 				]
 			]
