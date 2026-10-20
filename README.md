@@ -141,7 +141,6 @@ All design decisions are recorded in [docs/decisions](docs/decisions/README.md).
 
 ## Operator view
 
-<!-- VIDEO: on github.com, edit this file and drag docs/images/github/slalom-demo-1280.mp4 onto the next line. -->
 
 
 https://github.com/user-attachments/assets/ed783435-9904-4c0d-93c1-611725cea374
