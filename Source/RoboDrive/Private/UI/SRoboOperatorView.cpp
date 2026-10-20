@@ -26,6 +26,16 @@ namespace
 		return FMath::Abs(Value) < 0.5 * Resolution ? 0.0 : Value;
 	}
 
+	/**
+	 * Handles a click on a panel's background by doing nothing with it.
+	 * Unhandled clicks travel on up to the game viewport, and a click on the
+	 * world sets the robot's goal: a click meant for a panel must stop here.
+	 */
+	FReply OperatorSwallowClick(const FGeometry&, const FPointerEvent&)
+	{
+		return FReply::Handled();
+	}
+
 	/** Shown in place of a value that does not exist, such as speed with no robot. */
 	FText OperatorNoValue()
 	{
@@ -456,6 +466,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTopBar()
 
 	return SNew(SBorder)
 		.BorderImage(PanelBrush())
+		.OnMouseButtonDown_Static(&OperatorSwallowClick)
 		.Padding(FMargin(14.0f, 8.0f))
 		[
 			SNew(SHorizontalBox)
@@ -636,6 +647,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 
 	return SNew(SBorder)
 		.BorderImage(PanelBrush())
+		.OnMouseButtonDown_Static(&OperatorSwallowClick)
 		.Padding(PanelPadding)
 		[
 			SNew(SVerticalBox)
@@ -839,6 +851,23 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 				})
 			]
 
+			// How to give it somewhere to go, said where someone would look.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 4.0f, 0.0f, 0.0f)
+			[
+				SNew(STextBlock)
+				.Font(LabelFont())
+				.ColorAndOpacity(TextFaint())
+				.AutoWrapText(true)
+				.Text_Lambda([this]
+				{
+					return Telemetry.bHasGoal
+						? INVTEXT("Click the floor for a new goal, right-click to clear it")
+						: INVTEXT("Click the floor to give the robot a goal");
+				})
+			]
+
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0.0f, 12.0f, 0.0f, 12.0f)
@@ -943,6 +972,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTuningPanel()
 
 	return SNew(SBorder)
 		.BorderImage(PanelBrush())
+		.OnMouseButtonDown_Static(&OperatorSwallowClick)
 		.Padding(PanelPadding)
 		[
 			SNew(SVerticalBox)
@@ -1217,6 +1247,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeScenarioPanel()
 
 	return SNew(SBorder)
 		.BorderImage(PanelBrush())
+		.OnMouseButtonDown_Static(&OperatorSwallowClick)
 		.Padding(PanelPadding)
 		[
 			SNew(SVerticalBox)
@@ -1433,6 +1464,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeLidarPanel()
 
 	return SNew(SBorder)
 		.BorderImage(PanelBrush())
+		.OnMouseButtonDown_Static(&OperatorSwallowClick)
 		.Padding(12.0f)
 		// Only with a lidar to show.
 		.Visibility_Lambda([this]

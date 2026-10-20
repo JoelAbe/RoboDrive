@@ -2,7 +2,6 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "Dom/JsonObject.h"
-#include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -184,8 +183,8 @@ bool URoboScenarioSubsystem::Load(const TSharedRef<FJsonObject>& Scenario, FStri
 
 	ResetRobotTo(StartX, StartY, StartYaw, OutError);
 
-	// The goal, drawn so a person watching can see what the robot is meant to
-	// reach. Must come after the reset, which clears persistent debug lines.
+	// The goal. The marker is drawn each frame from the mission by the player
+	// controller, so it shows a goal however it was set.
 	URoboMissionSubsystem* Mission = GetWorld()->GetSubsystem<URoboMissionSubsystem>();
 
 	const TSharedPtr<FJsonObject>* Goal = nullptr;
@@ -195,14 +194,6 @@ bool URoboScenarioSubsystem::Load(const TSharedRef<FJsonObject>& Scenario, FStri
 		(*Goal)->TryGetNumberField(TEXT("x"), GoalX);
 		(*Goal)->TryGetNumberField(TEXT("y"), GoalY);
 		(*Goal)->TryGetNumberField(TEXT("tolerance_m"), ToleranceM);
-
-		const FVector GoalUU = RoboFrames::PositionToUe(FVector(GoalX, GoalY, 0.0));
-		const double GroundZ = GroundHeightUU(GoalUU.X, GoalUU.Y);
-
-		DrawDebugCylinder(GetWorld(),
-			FVector(GoalUU.X, GoalUU.Y, GroundZ),
-			FVector(GoalUU.X, GoalUU.Y, GroundZ + 50.0),
-			ToleranceM * RoboFrames::UUPerMeter, 32, FColor::Green, true, -1.0f, 0, 2.0f);
 
 		if (Mission != nullptr)
 		{

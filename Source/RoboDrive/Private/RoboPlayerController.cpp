@@ -9,6 +9,9 @@
 #include "RoboScenario.h"
 #include "RoboScenarioFiles.h"
 #include "Blueprint/UserWidget.h"
+#include "DrawDebugHelpers.h"
+#include "RoboFrames.h"
+#include "RoboMission.h"
 #include "Dom/JsonObject.h"
 #include "Misc/App.h"
 #include "Misc/Paths.h"
@@ -117,6 +120,21 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 	{
 		RestartScenario();
 	}
+
+	// Left-click on the world gives the robot a goal there; right-click
+	// withdraws it. Clicks on the panels never arrive here: they handle
+	// their own clicks before the game sees them.
+	if (WasInputKeyJustPressed(EKeys::LeftMouseButton))
+	{
+		SetGoalUnderCursor();
+	}
+
+	if (WasInputKeyJustPressed(EKeys::RightMouseButton))
+	{
+		ClearGoal();
+	}
+
+	DrawGoalMarker();
 	
 	ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn());
 	const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this);
@@ -229,3 +247,73 @@ void ARoboPlayerController::RestartScenario()
 		}
 	}
 }
+
+void ARoboPlayerController::SetGoalUnderCursor()
+{
+	URoboMissionSubsystem* Mission = URoboMissionSubsystem::Get(this);
+	FHitResult Hit;
+
+	// Whatever is under the mouse: usually the floor, sometimes an obstacle
+	// or a wall. Only where it is across the ground matters, not its height.
+	if (Mission == nullptr || !GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+	{
+		return;
+	}
+
+	// Into REP-103 metres, like every goal, at the boundary as always.
+	const FVector GoalRos = RoboFrames::PositionToRos(Hit.ImpactPoint);
+
+	FMissionGoal Goal;
+	Goal.X = GoalRos.X;
+	Goal.Y = GoalRos.Y;
+	Mission->SetGoal(Goal);
+}
+
+void ARoboPlayerController::ClearGoal()
+{
+	if (URoboMissionSubsystem* Mission = URoboMissionSubsystem::Get(this))
+	{
+		Mission->ClearGoal();
+	}
+}
+
+void ARoboPlayerController::DrawGoalMarker() const
+{
+	const URoboMissionSubsystem* Mission = URoboMissionSubsystem::Get(this);
+	if (Mission == nullptr || !Mission->HasGoal())
+	{
+		return;
+	}
+
+	const FMissionGoal Goal = Mission->GetGoal();
+	const FVector GoalUU = RoboFrames::PositionToUe(FVector(Goal.X, Goal.Y, 0.0));
+
+	// Stand the ring on the floor. Static geometry only, so a scenario's
+	// boxes, which are dynamic, are never mistaken for the ground.
+	double FloorZ = 0.0;
+	FHitResult Hit;
+	if (GetWorld()->LineTraceSingleByObjectType(Hit,
+		FVector(GoalUU.X, GoalUU.Y, 10000.0), FVector(GoalUU.X, GoalUU.Y, -10000.0),
+		FCollisionObjectQueryParams(ECC_WorldStatic)))
+	{
+		FloorZ = Hit.ImpactPoint.Z;
+	}
+
+	// The panel's colours: amber under way, teal reached, coral given up.
+	FColor Colour = FColor::FromHex(TEXT("E0A84A"));
+	if (Mission->GetStatus() == EMissionStatus::Arrived)
+	{
+		Colour = FColor::FromHex(TEXT("3CC8B4"));
+	}
+	else if (Mission->GetStatus() == EMissionStatus::Failed)
+	{
+		Colour = FColor::FromHex(TEXT("E8644F"));
+	}
+
+	// Not persistent: drawn for one frame, every frame, so it follows the
+	// goal and disappears with it.
+	DrawDebugCylinder(GetWorld(),
+		FVector(GoalUU.X, GoalUU.Y, FloorZ),
+		FVector(GoalUU.X, GoalUU.Y, FloorZ + 50.0),
+		Goal.ToleranceM * RoboFrames::UUPerMeter, 32, Colour, false, -1.0f, 0, 2.0f);
+}[[]]

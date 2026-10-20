@@ -53,10 +53,16 @@ int32 SRoboLidarView::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedG
 
 	// Shapes are drawn in layers, back to front: guides, then what was
 	// decided, then what was seen, then the robot on top.
-	const int32 GuideLayer = LayerId;
-	const int32 DecisionLayer = LayerId + 1;
-	const int32 ReturnLayer = LayerId + 2;
-	const int32 RobotLayer = LayerId + 3;
+	const int32 BackgroundLayer = LayerId;
+	const int32 GuideLayer = LayerId + 1;
+	const int32 DecisionLayer = LayerId + 2;
+	const int32 ReturnLayer = LayerId + 3;
+	const int32 RobotLayer = LayerId + 4;
+
+	// A solid background: through a translucent one, the paths and rays drawn
+	// in the world behind the panel show through and look like returns.
+	FSlateDrawElement::MakeBox(OutDrawElements, BackgroundLayer, AllottedGeometry.ToPaintGeometry(),
+		RoboOperatorStyle::SolidBrush(), ESlateDrawEffect::None, RoboOperatorStyle::Hex(TEXT("0E0F11")));
 
 	auto DrawLines = [&](const TArray<FVector2f>& Points, const FLinearColor& Colour, float Thickness, int32 Layer)
 	{
@@ -120,7 +126,11 @@ int32 SRoboLidarView::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedG
 		{
 			Outline.Add(ToView(CornerM));
 		}
-		Outline.Add(Outline[0]);
+		// Close the outline by repeating the first corner. Copied out first:
+		// Outline[0] is a reference into the array, and Add may move the
+		// array to make room, leaving that reference pointing at freed memory.
+		const FVector2f FirstCorner = Outline[0];
+		Outline.Add(FirstCorner);
 
 		DrawLines(Outline, RoboOperatorStyle::External().GetSpecifiedColor().CopyWithNewOpacity(0.6f), 1.0f, DecisionLayer);
 	}

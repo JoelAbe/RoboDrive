@@ -79,6 +79,15 @@ private:
 	void OnDrive(const FInputActionValue& Value);
 	void OnTurn(const FInputActionValue& Value);
 
+	/** Give the robot a goal at the point on the floor under the mouse. */
+	void SetGoalUnderCursor();
+
+	/** Withdraw the robot's goal. */
+	void ClearGoal();
+
+	/** Draw the current goal, however it was set, coloured by how the mission is going. */
+	void DrawGoalMarker() const;
+	
 	double CurrentLinearMS = 0.0;
 	double CurrentAngularRadS = 0.0;
 	
