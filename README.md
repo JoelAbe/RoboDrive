@@ -143,6 +143,10 @@ All design decisions are recorded in [docs/decisions](docs/decisions/README.md).
 
 <!-- VIDEO: on github.com, edit this file and drag docs/images/github/slalom-demo-1280.mp4 onto the next line. -->
 
+
+https://github.com/user-attachments/assets/ed783435-9904-4c0d-93c1-611725cea374
+
+
 While playing, panels over the game view show who is driving, command against
 actual motion, what the brain is doing and why, the mission, the sensor
 conditions, and, set apart, how far the robot's belief has drifted from the
