@@ -21,3 +21,5 @@ discussed, so this list stays a description of the project rather than a plan.
 | [0010](0010-reactive-obstacle-avoidance.md) | Avoid obstacles reactively, layered on go-to-goal | Accepted |
 | [0011](0011-fog-as-lidar-attenuation-and-clutter.md) | Model fog as attenuation and clutter on the lidar | Accepted |
 | [0012](0012-headless-runs-on-a-fixed-time-step.md) | Run headless simulations on a fixed time step | Accepted |
+| [0013](0013-operator-modes-and-emergency-stop.md) | Make modes a gate and the emergency stop a latch | Accepted |
+| [0014](0014-operator-view-in-slate.md) | Build the operator view in Slate, fed by a telemetry snapshot | Accepted |

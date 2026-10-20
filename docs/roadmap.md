@@ -10,7 +10,7 @@ phase is not done until its tests and documentation exist.
 | 2 | Sensors, odometry, deterministic time, record and replay | Done |
 | 3 | External simulation API and data-driven scenarios | Done |
 | 4 | In-engine autonomy, judged by the scenario suite | Done |
-| 5 | Operator view | Not started |
+| 5 | Operator view | In progress |
 | 6 | ROS 2 adapter (software-in-the-loop) | Not started |
 
 ## Phase 0: Foundations
@@ -89,6 +89,13 @@ Telemetry panel, mode switching, runtime-tunable parameters.
 
 **Done when:** someone unfamiliar with the project can change modes and
 parameters and understand what the robot is doing.
+
+The [operator view](operator-view.md) shows telemetry, the brain's current
+activity and ground truth set apart, with Auto and Manual modes and an
+emergency stop ([ADR 0013](decisions/0013-operator-modes-and-emergency-stop.md),
+[ADR 0014](decisions/0014-operator-view-in-slate.md)). Still to come: tuning
+from the panel, a top-down lidar view, setting goals by clicking, and a test
+with someone who has not seen the project.
 
 ## Phase 6: ROS 2 adapter
 

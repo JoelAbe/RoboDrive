@@ -6,14 +6,16 @@ A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, an external API, and a scenario test suite that runs in CI.
 
-> **Status:** Phase 4 complete. The robot drives from velocity commands
+> **Status:** Phase 4 complete, Phase 5 in progress. The robot drives from velocity commands
 > through real differential drive kinematics on Chaos physics, carries wheel
 > encoders, an IMU, a lidar and a camera on a simulated clock, and estimates
 > its own pose by dead reckoning. An external TCP API lets
 > any client drive and observe it, scenarios are defined as JSON, and every
 > push runs the full scenario suite in CI. The robot drives itself to a goal,
 > steering around obstacles its lidar sees, and fails in fog for a measured,
-> documented reason. See the [roadmap](docs/roadmap.md).
+> documented reason. An operator view shows what it is doing and why, with
+> manual and automatic modes and an emergency stop. See the
+> [roadmap](docs/roadmap.md).
 
 ## Requirements
 
@@ -81,7 +83,7 @@ flowchart LR
 | `RoboSim` | The simulation: vehicle, sensors, odometry, clock, recording and replay. Knows nothing about what is driving it. |
 | `RoboAutonomy` | The in-engine brains, go-to-goal and lidar obstacle avoidance: read a sensor snapshot, produce drive commands. |
 | `RoboApi` | The external API: a TCP server through which any client can drive and observe the simulation. |
-| `RoboDrive` | The game module: keyboard input, game mode and operator view. |
+| `RoboDrive` | The game module: keyboard input, game mode and the operator view. |
 
 The build enforces that direction. `RoboSim` cannot include headers from any of
 the other three, which keeps the simulation independent of whatever drives it,
@@ -131,6 +133,17 @@ published formulas be used as written.
 ([ADR 0002](docs/decisions/0002-rep103-internal-frames.md))
 
 All design decisions are recorded in [docs/decisions](docs/decisions/README.md).
+
+## Operator view
+
+While playing, panels over the game view show who is driving, command against
+actual motion, what the brain is doing and why, the mission, the sensor
+conditions, and, set apart, how far the robot's belief has drifted from the
+truth. **1** and **2** switch between automatic and manual driving, **Space**
+is an emergency stop, and **Tab** hides the panels. See
+[the operator view](docs/operator-view.md).
+([ADR 0013](docs/decisions/0013-operator-modes-and-emergency-stop.md),
+[ADR 0014](docs/decisions/0014-operator-view-in-slate.md))
 
 ## External API
 
