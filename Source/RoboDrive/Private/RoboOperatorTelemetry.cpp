@@ -8,6 +8,8 @@
 #include "RoboVehicle.h"
 #include "RoboWeather.h"
 #include "RoboScenario.h"
+#include "RoboAvoidance.h"
+#include "RoboFrames.h"
 
 FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* Player)
 {
@@ -73,6 +75,12 @@ FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* P
 			Out.BrainActivity = Last.Activity;
 			Out.DeviationDeg = FMath::RadiansToDegrees(Last.DeviationRad);
 			Out.BlockedForSeconds = Last.BlockedForSeconds;
+
+			// The heading chosen, and the corridor checked along it. Only the
+			// avoiding brain chooses a heading; go-to-goal leaves it unset.
+			Out.ChosenHeadingRad = Last.ChosenHeadingRad;
+			Out.CorridorLengthM = Autonomy->Avoidance.LookaheadM;
+			Out.CorridorHalfWidthM = Autonomy->Avoidance.RobotHalfWidthM + Autonomy->Avoidance.MarginM;
 		}
 	}
 
@@ -97,6 +105,12 @@ FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* P
 				Out.bHasBelievedDistance = true;
 				Out.BelievedDistanceM = FMath::Sqrt(
 					FMath::Square(Goal.X - Believed.X) + FMath::Square(Goal.Y - Believed.Y));
+				
+				// The goal's direction relative to where the robot believes it
+				// is facing: the same bearing the brain steers by.
+				Out.bHasGoalBearing = true;
+				Out.GoalBearingRad = RoboFrames::WrapRadians(
+					FMath::Atan2(Goal.Y - Believed.Y, Goal.X - Believed.X) - Believed.YawRad);
 			}
 		}
 	}
@@ -107,6 +121,14 @@ FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* P
 		Out.LidarBeamCount = Lidar->BeamCount;
 		Out.LidarRateHz = Lidar->ScanRateHz;
 		Out.LidarRangeM = Lidar->RangeMaxM;
+
+		// The scan turned into points with exactly the function avoidance
+		// uses, so the view shows what the brain sees and nothing more.
+		const FLidarScan& Scan = Lidar->GetLatestScan();
+		Out.bHasScan = Scan.RangesM.Num() > 0;
+		Out.ScanPointsM = RoboAvoidance::ScanToPoints(Scan);
+		Out.ScanAngleMinRad = Scan.AngleMinRad;
+		Out.ScanAngleMaxRad = Scan.AngleMinRad + Scan.AngleIncrementRad * FMath::Max(Scan.RangesM.Num() - 1, 0);
 	}
 
 	if (Odometry != nullptr)

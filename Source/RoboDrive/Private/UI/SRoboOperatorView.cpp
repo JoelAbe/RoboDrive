@@ -4,6 +4,7 @@
 #include "RoboOperatorStyle.h"
 #include "RoboPlayerController.h"
 #include "RoboScenarioFiles.h"
+#include "SRoboLidarView.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SSlider.h"
 #include "Widgets/Layout/SBorder.h"
@@ -392,11 +393,14 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 				]
 			]
 
-			// The world shows through here. Nothing is drawn, so nothing is hidden.
+			// The world shows through here, with only the lidar view at the
+			// bottom, small, where it covers the least of what matters.
 			+ SHorizontalBox::Slot()
 			.FillWidth(1.0f)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Bottom)
 			[
-				SNullWidget::NullWidget
+				MakeLidarPanel()
 			]
 
 			// Choosing a scenario above, tuning below.
@@ -1395,4 +1399,92 @@ void SRoboOperatorView::LoadScenarioFile(const FString& FileName)
 		// Leave the list open, so another can be picked straight away.
 		ScenarioError = FText::FromString(FString::Printf(TEXT("%s: %s"), *FileName, *Error));
 	}
+}
+
+TSharedRef<SWidget> SRoboOperatorView::MakeLidarPanel()
+{
+	using namespace RoboOperatorStyle;
+
+	// A small key, one coloured square and a word for each thing drawn.
+	// The return type is spelled out: Slate's declarative syntax only becomes a
+	// widget when converted to one, and "auto" would keep the unconverted form.
+	auto KeyEntry = [](const FText& Label, const FSlateColor& Colour) -> TSharedRef<SWidget>
+	{
+		return SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				OperatorDot(Colour)
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(5.0f, 0.0f, 12.0f, 0.0f)
+			[
+				SNew(STextBlock)
+				.Text(Label)
+				.Font(LabelFont())
+				.ColorAndOpacity(TextMuted())
+			];
+	};
+
+	return SNew(SBorder)
+		.BorderImage(PanelBrush())
+		.Padding(12.0f)
+		// Only with a lidar to show.
+		.Visibility_Lambda([this]
+		{
+			return Telemetry.bHasScan ? EVisibility::Visible : EVisibility::Collapsed;
+		})
+		[
+			// Fixed to the drawing's width, so the caveat wraps to fit it
+			// instead of stretching the panel.
+			SNew(SBox)
+			.WidthOverride(LidarViewWidth)
+			[
+				SNew(SVerticalBox)
+
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(INVTEXT("What the robot sees"))
+					.Font(TitleFont())
+					.ColorAndOpacity(TextPrimary())
+				]
+
+				// The honest caveat, where it applies.
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(0.0f, 2.0f, 0.0f, 0.0f)
+				[
+					SNew(STextBlock)
+					.Text(INVTEXT("Lidar returns as the brain receives them. In fog, echoes look like obstacles."))
+					.Font(LabelFont())
+					.ColorAndOpacity(TextMuted())
+					.AutoWrapText(true)
+				]
+
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(0.0f, 8.0f, 0.0f, 0.0f)
+				[
+					SNew(SRoboLidarView)
+					.Telemetry(&Telemetry)
+				]
+
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(0.0f, 8.0f, 0.0f, 0.0f)
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().AutoWidth() [ KeyEntry(INVTEXT("Returns"), LidarReturn()) ]
+					+ SHorizontalBox::Slot().AutoWidth() [ KeyEntry(INVTEXT("Goal, as believed"), Normal()) ]
+					+ SHorizontalBox::Slot().AutoWidth() [ KeyEntry(INVTEXT("Chosen heading"), External()) ]
+				]
+			]
+		];
 }

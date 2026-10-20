@@ -42,6 +42,18 @@ struct FRoboOperatorTelemetry
 	double DeviationDeg = 0.0;
 	double BlockedForSeconds = 0.0;
 
+	// What the lidar sees and what the brain made of it, in the robot's own
+	// frame (REP-103 metres and radians), for the lidar view
+	bool bHasScan = false;
+	TArray<FVector2D> ScanPointsM;
+	double ScanAngleMinRad = 0.0;
+	double ScanAngleMaxRad = 0.0;
+	bool bHasGoalBearing = false;
+	double GoalBearingRad = 0.0;
+	TOptional<double> ChosenHeadingRad;
+	double CorridorLengthM = 0.0;
+	double CorridorHalfWidthM = 0.0;
+	
 	// The operator's choices
 	EDriveMode DriveMode = EDriveMode::Auto;
 	bool bStopped = false;

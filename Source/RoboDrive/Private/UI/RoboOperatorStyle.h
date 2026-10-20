@@ -33,6 +33,13 @@ namespace RoboOperatorStyle
 	inline constexpr float ColumnWidth = 300.0f;
 	inline constexpr float PanelPadding = 18.0f;
 
+	// The lidar view: its drawing area, and how much of the world it shows.
+	// Most of what matters to avoidance is within a few metres, so the view
+	// shows 5 m ahead rather than the lidar's full 12 m.
+	inline constexpr float LidarViewWidth = 320.0f;
+	inline constexpr float LidarViewHeight = 200.0f;
+	inline constexpr double LidarViewRangeM = 5.0;
+
 	// Surfaces
 	inline FLinearColor PanelFill()    { return Hex(TEXT("141518E6")); }
 	inline FLinearColor PanelOutline() { return Hex(TEXT("2B2D31")); }
@@ -54,6 +61,9 @@ namespace RoboOperatorStyle
 	inline FSlateColor Attention() { return Hex(TEXT("E0A84A")); }
 	inline FSlateColor Stop()      { return Hex(TEXT("E8644F")); }
 	inline FSlateColor External()  { return Hex(TEXT("9C8CF2")); }
+
+	/** Lidar returns, close to the orange of the rays drawn in the world. */
+	inline FSlateColor LidarReturn() { return Hex(TEXT("E8823A")); }
 
 	// Fonts. The engine's default family, so nothing extra has to be shipped.
 	// Numbers are monospaced so they do not jitter sideways as they change.
@@ -121,6 +131,13 @@ namespace RoboOperatorStyle
 			.SetDisabledThumbImage(Thumb)
 			.SetBarThickness(4.0f);
 		return Style;
+	}
+
+	/** A plain white square, tinted per use, for drawing shapes by hand. */
+	inline const FSlateBrush* SolidBrush()
+	{
+		static const FSlateColorBrush Brush(FLinearColor::White);
+		return &Brush;
 	}
 
 	/** A white circle, tinted per use to show a status. */

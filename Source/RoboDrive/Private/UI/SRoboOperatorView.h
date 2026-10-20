@@ -12,8 +12,8 @@ class SVerticalBox;
 /**
  * Everything the operator sees, laid over the game view.
  *
- * A top bar across the screen, a column on the left for the robot, and one on
- * the right for choosing a scenario and tuning. The rest is left empty, so the world shows through:
+ * A top bar across the screen, a column on the left for the robot, one on the
+ * right for choosing a scenario and tuning, and the lidar view at the bottom. The rest is left empty, so the world shows through:
  * the panels cover the view rather than shrinking it.
  *
  * Telemetry and tuning are read once per frame in Tick, and everything on
@@ -36,6 +36,7 @@ private:
 	TSharedRef<SWidget> MakeRobotPanel();
 	TSharedRef<SWidget> MakeTuningPanel();
 	TSharedRef<SWidget> MakeScenarioPanel();
+	TSharedRef<SWidget> MakeLidarPanel();
 
 	/** Re-read the Scenarios folder and rebuild the list of buttons. */
 	void RefreshScenarioList();
