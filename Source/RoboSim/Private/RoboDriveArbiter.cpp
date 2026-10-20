@@ -20,6 +20,13 @@ FDriveCommand FDriveArbiter::Evaluate(double SimTimeSeconds)
 	// correct answer when no source is driving.
 	FDriveCommand Winner;
 
+	// The emergency stop beats every source, a person at the keys included.
+	if (bStopped)
+	{
+		ActiveSource = EDriveSource::None;
+		return Winner;
+	}
+	
 	for (const FDriveCommand& Candidate : Latest)
 	{
 		if (Candidate.Source == EDriveSource::None)
@@ -27,6 +34,12 @@ FDriveCommand FDriveArbiter::Evaluate(double SimTimeSeconds)
 			continue;
 		}
 
+		// In Manual mode only a person may drive. Others are ignored, not outranked.
+		if (Mode == EDriveMode::Manual && Candidate.Source != EDriveSource::Manual)
+		{
+			continue;
+		}
+		
 		const bool bFresh = (SimTimeSeconds - Candidate.TimeSeconds) <= CommandTimeout;
 		const bool bHigherPriority = Candidate.Source > Winner.Source;
 

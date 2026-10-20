@@ -37,13 +37,33 @@ public:
 	double GetCommandTimeout() const { return CommandTimeout; }
 	void SetCommandTimeout(double Seconds) { CommandTimeout = Seconds; }
 
-	/** Forget every submitted command, as when resetting a scenario. */
+	/** Which sources may drive. See EDriveMode. */
+	void SetMode(EDriveMode InMode) { Mode = InMode; }
+	EDriveMode GetMode() const { return Mode; }
+
+	/**
+	 * Emergency stop. Nothing drives, a person at the keys included, until it
+	 * is released. A latch rather than a source: a source's command expires
+	 * after the timeout, and a stop that expired by itself would be no stop.
+	 */
+	void EngageStop() { bStopped = true; }
+	void ReleaseStop() { bStopped = false; }
+	bool IsStopped() const { return bStopped; }
+	
+	/**
+	 * Forget every submitted command, as when resetting a scenario. The mode
+	 * and the emergency stop are left alone: they are the operator's
+	 * decisions, and a script resetting the world must not undo them.
+	 */
 	void Reset();
 
 private:
 	double CommandTimeout;
 	EDriveSource ActiveSource = EDriveSource::None;
 
+	EDriveMode Mode = EDriveMode::Auto;
+	bool bStopped = false;
+	
 	/** Latest command per source, indexed by the source's numeric value. */
 	static constexpr int32 SourceCount = 4;
 	FDriveCommand Latest[SourceCount];

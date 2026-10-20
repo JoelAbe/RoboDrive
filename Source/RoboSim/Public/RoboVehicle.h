@@ -26,6 +26,23 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Robot")
 	EDriveSource GetActiveDriveSource() const;
 
+	/** Which sources may drive. Set by the operator. */
+	UFUNCTION(BlueprintCallable, Category = "Robot|Operator")
+	void SetDriveMode(EDriveMode Mode);
+
+	UFUNCTION(BlueprintPure, Category = "Robot|Operator")
+	EDriveMode GetDriveMode() const;
+
+	/** Stop the robot and keep it stopped, whoever is driving, until released. */
+	UFUNCTION(BlueprintCallable, Category = "Robot|Operator")
+	void EngageEmergencyStop();
+
+	UFUNCTION(BlueprintCallable, Category = "Robot|Operator")
+	void ReleaseEmergencyStop();
+
+	UFUNCTION(BlueprintPure, Category = "Robot|Operator")
+	bool IsEmergencyStopped() const;
+	
 	/** Temporary: drive from the Details panel before input exists. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bUseDebugCommand = false;

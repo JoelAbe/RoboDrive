@@ -26,6 +26,23 @@ enum class EDriveSource : uint8
 };
 
 /**
+ * Which sources the operator allows to drive.
+ *
+ * A gate, not a priority: in Manual, autonomy and external clients are
+ * ignored entirely rather than merely outranked, so letting go of the keys
+ * stops the robot instead of handing it back to the brain.
+ */
+UENUM(BlueprintType)
+enum class EDriveMode : uint8
+{
+	/** Any source may drive, highest priority first. A person at the keys still overrides. */
+	Auto = 0	UMETA(DisplayName = "Auto"),
+
+	/** Only a person at the controls may drive. */
+	Manual = 1	UMETA(DisplayName = "Manual")
+};
+
+/**
  * A request for the robot to move, in REP-103 SI units.
  *
  * Commands expire: an arbiter ignores one whose timestamp is too old, so a

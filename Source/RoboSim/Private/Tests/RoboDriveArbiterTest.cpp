@@ -120,4 +120,81 @@ bool FDriveArbiterTimeoutBoundaryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDriveArbiterStopBeatsManualTest, "RoboDrive.RoboSim.Arbiter.StopBeatsManual", RoboTest::Flags)
+
+bool FDriveArbiterStopBeatsManualTest::RunTest(const FString& Parameters)
+{
+	FDriveArbiter Arbiter;
+	Arbiter.Submit(MakeCommand(EDriveSource::Manual, 1.0, 10.0));
+	Arbiter.EngageStop();
+
+	const FDriveCommand Result = Arbiter.Evaluate(10.0);
+
+	TestNearlyEqual(TEXT("Even a person at the keys cannot drive"), Result.Linear, 0.0, RoboTest::Tolerance);
+	TestEqual(TEXT("Nobody is driving"), Arbiter.GetActiveSource(), EDriveSource::None);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDriveArbiterStopDoesNotExpireTest, "RoboDrive.RoboSim.Arbiter.StopDoesNotExpire", RoboTest::Flags)
+
+bool FDriveArbiterStopDoesNotExpireTest::RunTest(const FString& Parameters)
+{
+	// Engaged at the start, checked 100 s later against a fresh command:
+	// far past the 0.25 s that any command lasts.
+	FDriveArbiter Arbiter;
+	Arbiter.EngageStop();
+	Arbiter.Submit(MakeCommand(EDriveSource::Autonomy, 1.0, 100.0));
+
+	TestNearlyEqual(TEXT("Still stopped long after it was pressed"),
+		Arbiter.Evaluate(100.0).Linear, 0.0, RoboTest::Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDriveArbiterStopReleasesTest, "RoboDrive.RoboSim.Arbiter.StopReleases", RoboTest::Flags)
+
+bool FDriveArbiterStopReleasesTest::RunTest(const FString& Parameters)
+{
+	FDriveArbiter Arbiter;
+	Arbiter.EngageStop();
+	Arbiter.Submit(MakeCommand(EDriveSource::Autonomy, 1.0, 10.0));
+	TestNearlyEqual(TEXT("Stopped"), Arbiter.Evaluate(10.0).Linear, 0.0, RoboTest::Tolerance);
+
+	Arbiter.ReleaseStop();
+	TestNearlyEqual(TEXT("Drives again once released"), Arbiter.Evaluate(10.1).Linear, 1.0, RoboTest::Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDriveArbiterManualModeTest, "RoboDrive.RoboSim.Arbiter.ManualMode", RoboTest::Flags)
+
+bool FDriveArbiterManualModeTest::RunTest(const FString& Parameters)
+{
+	FDriveArbiter Arbiter;
+	Arbiter.SetMode(EDriveMode::Manual);
+	Arbiter.Submit(MakeCommand(EDriveSource::Autonomy, 1.0, 10.0));
+	Arbiter.Submit(MakeCommand(EDriveSource::External, 2.0, 10.0));
+
+	// Fresh commands from both, and still nothing: they are ignored, not outranked.
+	TestNearlyEqual(TEXT("Autonomy and external are ignored"), Arbiter.Evaluate(10.0).Linear, 0.0, RoboTest::Tolerance);
+	TestEqual(TEXT("So nobody is driving"), Arbiter.GetActiveSource(), EDriveSource::None);
+
+	Arbiter.Submit(MakeCommand(EDriveSource::Manual, 0.5, 10.0));
+	TestNearlyEqual(TEXT("A person still can"), Arbiter.Evaluate(10.0).Linear, 0.5, RoboTest::Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDriveArbiterResetKeepsOperatorTest, "RoboDrive.RoboSim.Arbiter.ResetKeepsOperator", RoboTest::Flags)
+
+bool FDriveArbiterResetKeepsOperatorTest::RunTest(const FString& Parameters)
+{
+	// Resetting a scenario must not undo what the operator decided.
+	FDriveArbiter Arbiter;
+	Arbiter.EngageStop();
+	Arbiter.SetMode(EDriveMode::Manual);
+	Arbiter.Reset();
+
+	TestTrue(TEXT("Still stopped"), Arbiter.IsStopped());
+	TestTrue(TEXT("Still in manual"), Arbiter.GetMode() == EDriveMode::Manual);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

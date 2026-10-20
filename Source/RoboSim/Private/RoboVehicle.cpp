@@ -215,6 +215,45 @@ EDriveSource ARoboVehicle::GetActiveDriveSource() const
 	return Arbiter.GetActiveSource();
 }
 
+void ARoboVehicle::SetDriveMode(EDriveMode Mode)
+{
+	if (Mode != Arbiter.GetMode())
+	{
+		UE_LOG(LogRoboSim, Log, TEXT("%s drive mode: %s"),
+			*GetName(), *UEnum::GetDisplayValueAsText(Mode).ToString());
+		Arbiter.SetMode(Mode);
+	}
+}
+
+EDriveMode ARoboVehicle::GetDriveMode() const
+{
+	return Arbiter.GetMode();
+}
+
+void ARoboVehicle::EngageEmergencyStop()
+{
+	if (!Arbiter.IsStopped())
+	{
+		// A warning, so it stands out in the log: a stop is always worth noticing.
+		UE_LOG(LogRoboSim, Warning, TEXT("%s emergency stop engaged"), *GetName());
+		Arbiter.EngageStop();
+	}
+}
+
+void ARoboVehicle::ReleaseEmergencyStop()
+{
+	if (Arbiter.IsStopped())
+	{
+		UE_LOG(LogRoboSim, Log, TEXT("%s emergency stop released"), *GetName());
+		Arbiter.ReleaseStop();
+	}
+}
+
+bool ARoboVehicle::IsEmergencyStopped() const
+{
+	return Arbiter.IsStopped();
+}
+
 double ARoboVehicle::GetWheelSeparationM() const
 {
 	if (Wheels.Num() < 2)
