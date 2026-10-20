@@ -185,6 +185,30 @@ limit, written without Unreal and reviewable in a diff. The
   shortening the lidar's range, but by clutter that makes the steering jitter,
   the wheels slip and odometry claim arrival at a goal not reached.
 
+## Limitations and next steps
+
+What this does not do yet, and what would come next:
+
+- **Fog defeats the avoidance.** The brain trusts every lidar return, so fog
+  echoes look like obstacles. Filtering returns that do not persist across
+  scans, and ramping the brain's commands, would fix it; `slalom_fog` would
+  then report `XPASS` and become a regression test.
+  ([fog.md](docs/fog.md))
+- **No ROS 2 bridge.** The API, the REP-103 frames and the LaserScan-shaped
+  lidar data are built for one, as Phase 6 of the [roadmap](docs/roadmap.md).
+- **Scenarios do not detect collisions.** A run passes on reaching the goal,
+  even if the robot scraped something on the way.
+- **The API is advance-and-wait, not lockstep.** Results are reproducible to
+  centimetres rather than bit for bit, and an external client's pauses count
+  against it more when headless runs go faster than real time.
+  ([ADR 0012](docs/decisions/0012-headless-runs-on-a-fixed-time-step.md))
+- **Wheels reach their commanded speed instantly**, and the encoders read
+  commanded rotation, so slip is likely overstated.
+  ([ADR 0004](docs/decisions/0004-raycast-wheel-vehicle-model.md))
+- **The camera renders but is not served** over the API.
+- **The operator view's user test is still to be run**, which is what Phase 5
+  is judged by.
+
 ## Layout
 
 ```
