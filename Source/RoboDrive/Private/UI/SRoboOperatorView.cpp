@@ -13,6 +13,7 @@
 #include "Widgets/Layout/SWrapBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SNullWidget.h"
+#include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
 
 namespace
@@ -100,15 +101,15 @@ namespace
 
 		case EBrainActivity::SteeringAround:
 			// Positive is left, as everywhere in REP-103.
-			return FText::FromString(FString::Printf(TEXT("Steering %.0f deg %s of the goal to get around something"),
+			return FText::FromString(FString::Printf(TEXT("Avoiding: %.0f deg %s of the goal"),
 				FMath::Abs(Telemetry.DeviationDeg), Telemetry.DeviationDeg > 0.0 ? TEXT("left") : TEXT("right")));
 
 		case EBrainActivity::BoxedIn:
-			return FText::FromString(FString::Printf(TEXT("Boxed in for %.1f s, turning to look for a way out"),
+			return FText::FromString(FString::Printf(TEXT("Boxed in %.1f s, looking for a gap"),
 				Telemetry.BlockedForSeconds));
 
 		case EBrainActivity::GaveUp:
-			return INVTEXT("Gave up: boxed in for too long");
+			return INVTEXT("Gave up: boxed in too long");
 
 		case EBrainActivity::Arrived:
 			return INVTEXT("At the goal");
@@ -460,26 +461,24 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
 			[
+				// Overlaid rather than stacked: each panel is pinned to its own
+				// end of the column, so the lidar view stays on screen however
+				// tall the robot panel is. On a very short window they overlap
+				// rather than pushing anything off the bottom.
 				SNew(SBox)
 				.WidthOverride(RoboOperatorStyle::ColumnWidth)
 				[
-					SNew(SVerticalBox)
+					SNew(SOverlay)
+					.Visibility(EVisibility::SelfHitTestInvisible)
 
-					+ SVerticalBox::Slot()
-					.AutoHeight()
+					+ SOverlay::Slot()
+					.VAlign(VAlign_Top)
 					[
 						MakeRobotPanel()
 					]
 
-					+ SVerticalBox::Slot()
-					.FillHeight(1.0f)
-					[
-						SNullWidget::NullWidget
-					]
-
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(0.0f, 12.0f, 0.0f, 0.0f)
+					+ SOverlay::Slot()
+					.VAlign(VAlign_Bottom)
 					[
 						MakeLidarPanel()
 					]
@@ -862,12 +861,16 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 			.AutoHeight()
 			.Padding(0.0f, 4.0f, 0.0f, 0.0f)
 			[
+				// Always exactly one line, so the panel never changes height as
+				// the brain's activity changes: a panel that grows pushes the
+				// lidar view off the screen. Hidden rather than collapsed for the
+				// same reason, and cut short with an ellipsis if ever too long.
 				SNew(STextBlock)
 				.Font(BodyFont())
-				.AutoWrapText(true)
+				.OverflowPolicy(ETextOverflowPolicy::Ellipsis)
 				.Visibility_Lambda([this]
 				{
-					return Telemetry.bHasBrainActivity ? EVisibility::Visible : EVisibility::Collapsed;
+					return Telemetry.bHasBrainActivity ? EVisibility::Visible : EVisibility::Hidden;
 				})
 				.ColorAndOpacity_Lambda([this]
 				{
@@ -902,51 +905,52 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 					ValueFont())
 			]
 
+			// Where, and how far the robot believes it has left. Two fields of
+			// fixed size rather than a sentence, so the panel's height never
+			// depends on how long the numbers are.
 			+ SVerticalBox::Slot()
 			.AutoHeight()
-			.Padding(0.0f, 4.0f, 0.0f, 0.0f)
+			.Padding(0.0f, 8.0f, 0.0f, 0.0f)
 			[
-				SNew(STextBlock)
-				.Font(BodyFont())
-				.ColorAndOpacity(TextMuted())
-				.AutoWrapText(true)
-				// Collapsed, not just empty, without a goal: an empty line
-				// still takes up its padding and leaves a gap.
-				.Visibility_Lambda([this]
-				{
-					return Telemetry.bHasGoal ? EVisibility::Visible : EVisibility::Collapsed;
-				})
-				.Text_Lambda([this]
-				{
-					if (!Telemetry.bHasGoal)
-					{
-						return FText::GetEmpty();
-					}
+				SNew(SUniformGridPanel)
+				.SlotPadding(FMargin(0.0f, 0.0f, 12.0f, 0.0f))
 
-					FString Text = FString::Printf(TEXT("Goal (%.1f, %.1f)"), Telemetry.GoalX, Telemetry.GoalY);
-					if (Telemetry.bHasBelievedDistance)
-					{
-						Text += FString::Printf(TEXT(", %.1f m away, it believes"), Telemetry.BelievedDistanceM);
-					}
-					return FText::FromString(Text);
-				})
+				+ SUniformGridPanel::Slot(0, 0)
+				[
+					OperatorField(INVTEXT("Goal"),
+						TAttribute<FText>::CreateLambda([this]
+						{
+							return Telemetry.bHasGoal
+								? FText::FromString(FString::Printf(TEXT("(%.1f, %.1f)"), Telemetry.GoalX, Telemetry.GoalY))
+								: OperatorNoValue();
+						}),
+						TextPrimary(), NumberFont())
+				]
+
+				+ SUniformGridPanel::Slot(1, 0)
+				[
+					OperatorField(INVTEXT("Away, it believes"),
+						TAttribute<FText>::CreateLambda([this]
+						{
+							return Telemetry.bHasGoal && Telemetry.bHasBelievedDistance
+								? FText::FromString(FString::Printf(TEXT("%.1f m"), Telemetry.BelievedDistanceM))
+								: OperatorNoValue();
+						}),
+						TextPrimary(), NumberFont())
+				]
 			]
 
-			// How to give it somewhere to go, said where someone would look.
+			// How to give it somewhere to go, said where someone would look,
+			// short enough for one line.
 			+ SVerticalBox::Slot()
 			.AutoHeight()
-			.Padding(0.0f, 4.0f, 0.0f, 0.0f)
+			.Padding(0.0f, 6.0f, 0.0f, 0.0f)
 			[
 				SNew(STextBlock)
 				.Font(LabelFont())
 				.ColorAndOpacity(TextFaint())
-				.AutoWrapText(true)
-				.Text_Lambda([this]
-				{
-					return Telemetry.bHasGoal
-						? INVTEXT("Click the floor for a new goal, right-click to clear it")
-						: INVTEXT("Click the floor to give the robot a goal");
-				})
+				.OverflowPolicy(ETextOverflowPolicy::Ellipsis)
+				.Text(INVTEXT("Click the floor for a goal, right-click to clear"))
 			]
 
 			+ SVerticalBox::Slot()
