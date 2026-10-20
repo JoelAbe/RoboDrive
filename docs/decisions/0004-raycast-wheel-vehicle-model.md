@@ -48,3 +48,10 @@ with a free-rolling caster at each end.
 - Forces are currently applied on the actor tick while physics substeps at
   120 Hz, so a force sized to correct an error in one step is applied across
   several. Phase 2 moves this onto the physics tick.
+
+*Note: two of these expectations changed in later phases. Forces stayed on the
+actor tick, after replay divergence was measured and found small
+([ADR 0006](0006-physics-on-the-actor-tick.md)). And the wheel encoders read
+the commanded wheel rotation rather than the contact patch speed, so wheel slip
+appears to odometry as motion that did not happen; [fog.md](../fog.md) measures
+the consequence.*

@@ -6,15 +6,16 @@ A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, an external API, and a scenario test suite that runs in CI.
 
-> **Status:** Phase 4 complete, Phase 5 in progress. The robot drives from velocity commands
-> through real differential drive kinematics on Chaos physics, carries wheel
-> encoders, an IMU, a lidar and a camera on a simulated clock, and estimates
-> its own pose by dead reckoning. An external TCP API lets
-> any client drive and observe it, scenarios are defined as JSON, and every
-> push runs the full scenario suite in CI. The robot drives itself to a goal,
-> steering around obstacles its lidar sees, and fails in fog for a measured,
-> documented reason. An operator view shows what it is doing and why, with
-> manual and automatic modes and an emergency stop. See the
+> **Status:** Phase 4 complete; Phase 5 built, awaiting its user test. The
+> robot drives from velocity commands through real differential-drive
+> kinematics on Chaos physics, carries wheel encoders, an IMU, a lidar and a
+> camera on a simulated clock, and estimates its own pose by dead reckoning.
+> An external TCP API lets any client drive and observe it, scenarios are
+> defined as JSON, and every push runs the full scenario suite in CI. The robot
+> drives itself to a goal, steering around obstacles its lidar sees, and fails
+> in fog for a measured, documented reason. An operator view shows what it is
+> doing and why, with manual and automatic modes, an emergency stop, goals set
+> by clicking and a live view of what its lidar sees. See the
 > [roadmap](docs/roadmap.md).
 
 ## Requirements
@@ -39,7 +40,8 @@ There are two layers of tests, and CI runs both.
 **Unit tests** are C++ automation tests covering the maths that does not need a
 running world: frame conversions, kinematics, suspension and traction, the
 arbiter, the clock, odometry, the encoder, noise, the IMU, lidar geometry, the
-run file format, the brains and obstacle avoidance.
+run file format, the brains and obstacle avoidance, the fog model, scenario
+validation, and the operator view's drawing geometry.
 
 ```powershell
 ./Tools/RunTests.ps1                                    # build, then run all tests
@@ -100,7 +102,8 @@ points inside `RoboSim`: the **mission**, which holds the current goal, and the
 
 ```mermaid
 flowchart LR
-    Keyboard -- "Manual" --> Arbiter
+    Operator["Operator<br/>keyboard and view"] -- "Manual" --> Arbiter
+    Operator -- "goal by click" --> Mission
     Client["External client<br/>via RoboApi"] -- "External" --> Arbiter
     Client -- "set_goal" --> Mission
     Mission -- "goal" --> Brain["In-engine brain<br/>RoboAutonomy"]
@@ -189,14 +192,14 @@ Source/
   RoboSim/            simulation layer
   RoboAutonomy/       in-engine autonomy
   RoboApi/            external TCP API
-  RoboDrive/          game module
+  RoboDrive/          game module and operator view
 Content/              level, Blueprints and input assets
 Config/               project settings (edited through the editor)
 Scenarios/            scenario files for the test suite
 Tools/
   RunTests.ps1        build and run the unit tests
   RunScenarios.ps1    run the scenario suite headless
-  Analysis/           Python: API client, scenario harness, run analysis
+  Analysis/           Python: API client, scenario harness, fog sweep, run analysis
 docs/                 roadmap, references, measurements and decision records
 .github/workflows/    CI
 ```
