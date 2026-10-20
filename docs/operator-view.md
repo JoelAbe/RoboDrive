@@ -13,6 +13,8 @@ leave the middle clear for the world. **Tab** hides and shows them.
 | **2** | Manual mode: only you drive. Let go and the robot stops. |
 | **Space** | Emergency stop. Releasing it takes the button in the top bar. |
 | **R** | Restart the current scenario. |
+| Left click on the floor | Give the robot a goal there. |
+| Right click | Withdraw the goal. |
 | **Tab** | Hide or show the panels. |
 
 ## The top bar
@@ -41,7 +43,29 @@ From top to bottom:
 - **Lidar and weather**: the sensor, and the fog it is working in.
 - **Ground truth**: how far odometry has drifted from where the robot really is.
   The simulation knows this and the robot does not, so it is boxed and labelled
-  as never shown to the robot.
+  as never shown to the robot. **Reset odometry to the truth** sets the robot's
+  belief back to where it really is: the operator correcting the robot, as a
+  pose estimate does in ROS. The brain is given a corrected belief; it still
+  never reads the truth itself. The drawn paths start again from there.
+
+## The lidar view
+
+At the foot of the left column, a top-down drawing of what the robot sees, in
+its own frame, facing up: the lidar returns, the direction it believes the goal
+is in, the heading it chose, and the corridor it checked along that heading.
+Range rings mark each metre, out to 5 m.
+
+It is drawn from exactly what the brain receives. Fog echoes therefore look
+like any other return, because to the brain they are, and the goal direction
+comes from odometry, so it is wrong when odometry is.
+
+## Goals
+
+A left click on the floor gives the robot a goal there; a right click withdraws
+it. Clicks on the panels never reach the world. The goal is drawn as a ring on
+the floor, amber while the robot is on its way, teal once it believes it has
+arrived and coral if it gave up, whether it came from a click, a scenario or
+the API.
 
 ## The scenario panel
 

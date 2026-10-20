@@ -76,8 +76,8 @@ ARoboVehicle::ARoboVehicle()
 	
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(Chassis);
-	CameraBoom->TargetArmLength = 350.0f;
-	CameraBoom->SocketOffset = FVector(0.0, 0.0, 60.0);
+	CameraBoom->TargetArmLength = 600.0f;
+	CameraBoom->SocketOffset = FVector(0.0, 0.0, 100.0);
 	CameraBoom->SetRelativeRotation(FRotator(-25.0, 0.0, 0.0));
 
 	// Follow the robot's heading, but ignore chassis pitch and roll. The
