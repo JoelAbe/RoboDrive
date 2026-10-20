@@ -24,7 +24,7 @@ the simulated time, and how fast it runs against the wall clock. Below 1x, the s
 up.
 
 On the right are the mode buttons and the emergency stop. The selected mode is
-filled. While the stop is engaged the bar turns coral and the button reads
+filled. While the stop is engaged the bar turns red and the button reads
 **Release stop**.
 
 ## The robot panel
@@ -63,8 +63,8 @@ comes from odometry, so it is wrong when odometry is.
 
 A left click on the floor gives the robot a goal there; a right click withdraws
 it. Clicks on the panels never reach the world. The goal is drawn as a ring on
-the floor, amber while the robot is on its way, teal once it believes it has
-arrived and coral if it gave up, whether it came from a click, a scenario or
+the floor, amber while the robot is on its way, green once it believes it has
+arrived and red if it gave up, whether it came from a click, a scenario or
 the API.
 
 ## The scenario panel
@@ -104,10 +104,13 @@ editor's Details panel shows here too.
 
 | Colour | Means |
 |---|---|
-| Teal | Running normally: autonomy driving, the goal reached |
+| Green | Running normally: autonomy driving, the goal reached, a selected option |
 | Amber | Worth watching: you driving, a mission under way, fog, steering around |
-| Coral | Stopped or failed |
+| Red | Stopped or failed |
 | Violet | An external client, such as a test script, is driving |
+| Blue outline | An action that does something once, such as Restart |
+
+Every button lightens while the mouse is over it and darkens while it is held.
 
 ## How it is built
 

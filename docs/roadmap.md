@@ -96,8 +96,9 @@ emergency stop ([ADR 0013](decisions/0013-operator-modes-and-emergency-stop.md),
 [ADR 0014](decisions/0014-operator-view-in-slate.md)). The brain, avoidance and
 weather can be tuned from the panel, and scenarios chosen, restarted and
 unloaded there ([ADR 0015](decisions/0015-scenario-loading-in-the-simulation.md)).
-Still to come: a top-down lidar view, setting goals by clicking, and a test
-with someone who has not seen the project.
+A top-down lidar view shows what the brain sees, and goals can be set by
+clicking the floor. Still to come: the test the phase is defined by, with
+someone who has not seen the project.
 
 ## Phase 6: ROS 2 adapter
 
