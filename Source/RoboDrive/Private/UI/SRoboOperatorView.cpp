@@ -2,6 +2,8 @@
 
 #include "GameFramework/PlayerController.h"
 #include "RoboOperatorStyle.h"
+#include "RoboPlayerController.h"
+#include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
@@ -39,6 +41,83 @@ namespace
 		}
 	}
 
+	/**
+	 * What the brain is doing, in a sentence. When the brain is not in control,
+	 * that is said instead: it keeps deciding, but nobody is listening, and
+	 * showing its plans as if they were happening would mislead.
+	 */
+	FText OperatorActivityText(const FRoboOperatorTelemetry& Telemetry)
+	{
+		if (!Telemetry.bHasBrainActivity)
+		{
+			return FText::GetEmpty();
+		}
+
+		if (Telemetry.bStopped)
+		{
+			return INVTEXT("Overruled by the emergency stop");
+		}
+
+		if (Telemetry.DriveMode == EDriveMode::Manual)
+		{
+			return INVTEXT("Ignored in manual mode");
+		}
+
+		switch (Telemetry.BrainActivity)
+		{
+		case EBrainActivity::Idle:
+			return INVTEXT("Waiting for a goal");
+
+		case EBrainActivity::WaitingForScan:
+			return INVTEXT("Waiting for its first lidar scan");
+
+		case EBrainActivity::DrivingToGoal:
+			return INVTEXT("Heading straight for the goal");
+
+		case EBrainActivity::SteeringAround:
+			// Positive is left, as everywhere in REP-103.
+			return FText::FromString(FString::Printf(TEXT("Steering %.0f deg %s of the goal to get around something"),
+				FMath::Abs(Telemetry.DeviationDeg), Telemetry.DeviationDeg > 0.0 ? TEXT("left") : TEXT("right")));
+
+		case EBrainActivity::BoxedIn:
+			return FText::FromString(FString::Printf(TEXT("Boxed in for %.1f s, turning to look for a way out"),
+				Telemetry.BlockedForSeconds));
+
+		case EBrainActivity::GaveUp:
+			return INVTEXT("Gave up: boxed in for too long");
+
+		case EBrainActivity::Arrived:
+			return INVTEXT("At the goal");
+
+		default:
+			return FText::GetEmpty();
+		}
+	}
+
+	FSlateColor OperatorActivityColour(const FRoboOperatorTelemetry& Telemetry)
+	{
+		if (Telemetry.bStopped || Telemetry.DriveMode == EDriveMode::Manual)
+		{
+			return RoboOperatorStyle::TextMuted();
+		}
+
+		switch (Telemetry.BrainActivity)
+		{
+		case EBrainActivity::DrivingToGoal:
+		case EBrainActivity::Arrived:        return RoboOperatorStyle::Normal();
+		case EBrainActivity::SteeringAround:
+		case EBrainActivity::BoxedIn:        return RoboOperatorStyle::Attention();
+		case EBrainActivity::GaveUp:         return RoboOperatorStyle::Stop();
+		default:                             return RoboOperatorStyle::TextMuted();
+		}
+	}
+
+	/** The player controller that carries out the operator's actions, if there is one. */
+	ARoboPlayerController* OperatorController(const TWeakObjectPtr<APlayerController>& Player)
+	{
+		return Cast<ARoboPlayerController>(Player.Get());
+	}
+
 	/** A small coloured circle, for a status at a glance. */
 	TSharedRef<SWidget> OperatorDot(const TAttribute<FSlateColor>& Colour)
 	{
@@ -53,7 +132,7 @@ namespace
 			];
 	}
 
-	/** A one-pixel rule between sections, with space around it. */
+	/** A one-pixel rule between sections. */
 	TSharedRef<SWidget> OperatorDivider()
 	{
 		return SNew(SBox)
@@ -117,6 +196,49 @@ namespace
 				.ColorAndOpacity(RoboOperatorStyle::TextPrimary())
 			];
 	}
+
+	/**
+	 * A button with a label and the key that does the same thing, so the
+	 * shortcut is learned by using the button.
+	 *
+	 * Not focusable: a focusable button would take the keyboard after a click,
+	 * and the keys that drive the robot would stop reaching the game.
+	 */
+	TSharedRef<SWidget> OperatorButton(const TAttribute<FText>& Label, const FText& Key,
+		const TAttribute<FSlateColor>& Fill, const TAttribute<FSlateColor>& TextColour,
+		FOnClicked OnClicked)
+	{
+		return SNew(SButton)
+			.ButtonStyle(&RoboOperatorStyle::ButtonStyle())
+			.ButtonColorAndOpacity(Fill)
+			.ContentPadding(FMargin(12.0f, 5.0f))
+			.IsFocusable(false)
+			.OnClicked(OnClicked)
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(Label)
+					.Font(RoboOperatorStyle::TitleFont())
+					.ColorAndOpacity(TextColour)
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(8.0f, 0.0f, 0.0f, 0.0f)
+				[
+					SNew(STextBlock)
+					.Text(Key)
+					.Font(RoboOperatorStyle::LabelFont())
+					.ColorAndOpacity(TextColour)
+				]
+			];
+	}
 }
 
 void SRoboOperatorView::Construct(const FArguments& InArgs)
@@ -126,9 +248,12 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 
 	const float Margin = RoboOperatorStyle::ScreenMargin;
 
+	// The containers that span the screen pass clicks through to the game.
+	// Only the panels and buttons themselves can be clicked.
 	ChildSlot
 	[
 		SNew(SVerticalBox)
+		.Visibility(EVisibility::SelfHitTestInvisible)
 
 		// The top bar, across the full width.
 		+ SVerticalBox::Slot()
@@ -144,6 +269,7 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 		.Padding(Margin, 12.0f, Margin, Margin)
 		[
 			SNew(SHorizontalBox)
+			.Visibility(EVisibility::SelfHitTestInvisible)
 
 			// Only as tall as its contents, so it covers no more than it must.
 			+ SHorizontalBox::Slot()
@@ -184,14 +310,19 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTopBar()
 		[
 			SNew(SHorizontalBox)
 
-			// Whether there is a simulation running at all.
+			// The state of the whole simulation, with the emergency stop
+			// taking precedence over everything else.
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
 			.VAlign(VAlign_Center)
 			[
 				OperatorDot(TAttribute<FSlateColor>::CreateLambda([this]
 				{
-					return Telemetry.bHasSim ? Normal() : TextMuted();
+					if (!Telemetry.bHasSim)
+					{
+						return TextMuted();
+					}
+					return Telemetry.bStopped ? Stop() : Normal();
 				}))
 			]
 
@@ -202,10 +333,17 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTopBar()
 			[
 				SNew(STextBlock)
 				.Font(TitleFont())
-				.ColorAndOpacity(TextPrimary())
+				.ColorAndOpacity_Lambda([this]
+				{
+					return Telemetry.bStopped ? Stop() : TextPrimary();
+				})
 				.Text_Lambda([this]
 				{
-					return Telemetry.bHasSim ? INVTEXT("Simulating") : INVTEXT("No simulation");
+					if (!Telemetry.bHasSim)
+					{
+						return INVTEXT("No simulation");
+					}
+					return Telemetry.bStopped ? INVTEXT("Emergency stop") : INVTEXT("Simulating");
 				})
 			]
 
@@ -239,6 +377,90 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTopBar()
 						? FText::FromString(FString::Printf(TEXT("%.1fx real time"), Telemetry.RealTimeFactor))
 						: OperatorNoValue();
 				}))
+			]
+
+			// Mode: who may drive. The selected one is filled.
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(32.0f, 0.0f, 0.0f, 0.0f)
+			[
+				OperatorButton(INVTEXT("Auto"), INVTEXT("1"),
+					TAttribute<FSlateColor>::CreateLambda([this]
+					{
+						return Telemetry.DriveMode == EDriveMode::Auto ? Normal() : ControlFill();
+					}),
+					TAttribute<FSlateColor>::CreateLambda([this]
+					{
+						return Telemetry.DriveMode == EDriveMode::Auto ? TextOnFill() : TextPrimary();
+					}),
+					FOnClicked::CreateLambda([this]
+					{
+						if (ARoboPlayerController* Controller = OperatorController(Player))
+						{
+							Controller->SetDriveMode(EDriveMode::Auto);
+						}
+						return FReply::Handled();
+					}))
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(6.0f, 0.0f, 0.0f, 0.0f)
+			[
+				OperatorButton(INVTEXT("Manual"), INVTEXT("2"),
+					TAttribute<FSlateColor>::CreateLambda([this]
+					{
+						return Telemetry.DriveMode == EDriveMode::Manual ? Attention() : ControlFill();
+					}),
+					TAttribute<FSlateColor>::CreateLambda([this]
+					{
+						return Telemetry.DriveMode == EDriveMode::Manual ? TextOnFill() : TextPrimary();
+					}),
+					FOnClicked::CreateLambda([this]
+					{
+						if (ARoboPlayerController* Controller = OperatorController(Player))
+						{
+							Controller->SetDriveMode(EDriveMode::Manual);
+						}
+						return FReply::Handled();
+					}))
+			]
+
+			// The emergency stop. Space engages it from anywhere; releasing it
+			// takes this button, so a stop is never undone by a stray key.
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(16.0f, 0.0f, 0.0f, 0.0f)
+			[
+				OperatorButton(
+					TAttribute<FText>::CreateLambda([this]
+					{
+						return Telemetry.bStopped ? INVTEXT("Release stop") : INVTEXT("Stop");
+					}),
+					INVTEXT("Space"),
+					TAttribute<FSlateColor>::CreateLambda([this]
+					{
+						return Telemetry.bStopped ? Attention() : Stop();
+					}),
+					TextOnFill(),
+					FOnClicked::CreateLambda([this]
+					{
+						if (ARoboPlayerController* Controller = OperatorController(Player))
+						{
+							if (Telemetry.bStopped)
+							{
+								Controller->ReleaseEmergencyStop();
+							}
+							else
+							{
+								Controller->EngageEmergencyStop();
+							}
+						}
+						return FReply::Handled();
+					}))
 			]
 		];
 }
@@ -292,16 +514,24 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 				OperatorField(INVTEXT("Driving"),
 					TAttribute<FText>::CreateLambda([this]
 					{
-						return Telemetry.bHasRobot ? UEnum::GetDisplayValueAsText(Telemetry.DrivingSource) : OperatorNoValue();
+						if (!Telemetry.bHasRobot)
+						{
+							return OperatorNoValue();
+						}
+						return Telemetry.bStopped
+							? INVTEXT("Stopped")
+							: UEnum::GetDisplayValueAsText(Telemetry.DrivingSource);
 					}),
 					TAttribute<FSlateColor>::CreateLambda([this]
 					{
-						return OperatorSourceColour(Telemetry.DrivingSource);
+						return Telemetry.bStopped ? Stop() : OperatorSourceColour(Telemetry.DrivingSource);
 					}),
 					ValueFont())
 			]
 
-			// What was asked for, next to what the robot is actually doing.
+			// What was asked for, above what the robot is actually doing. The
+			// gap between the rows is the vehicle's own response: acceleration,
+			// grip and slip.
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0.0f, 12.0f, 0.0f, 0.0f)
@@ -335,11 +565,11 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 
 				+ SUniformGridPanel::Slot(0, 1)
 				[
-					OperatorField(INVTEXT("Actual speed"),
+					OperatorField(INVTEXT("Actual v"),
 						TAttribute<FText>::CreateLambda([this]
 						{
 							return Telemetry.bHasRobot
-								? FText::FromString(FString::Printf(TEXT("%.2f m/s"), Telemetry.ActualSpeedMS))
+								? FText::FromString(FString::Printf(TEXT("%.2f m/s"), Telemetry.ActualLinearMS))
 								: OperatorNoValue();
 						}),
 						TextPrimary(), NumberFont())
@@ -347,18 +577,53 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 
 				+ SUniformGridPanel::Slot(1, 1)
 				[
-					OperatorField(INVTEXT("Brain"),
+					OperatorField(INVTEXT("Actual w"),
 						TAttribute<FText>::CreateLambda([this]
 						{
-							return Telemetry.bHasRobot ? FText::FromString(Telemetry.BrainName) : OperatorNoValue();
+							return Telemetry.bHasRobot
+								? FText::FromString(FString::Printf(TEXT("%.2f rad/s"), Telemetry.ActualYawRateRadS))
+								: OperatorNoValue();
 						}),
-						TextPrimary(), BodyFont())
+						TextPrimary(), NumberFont())
 				]
+			]
+
+			// Which brain, and what it is doing right now.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				OperatorField(INVTEXT("Brain"),
+					TAttribute<FText>::CreateLambda([this]
+					{
+						return Telemetry.bHasRobot ? FText::FromString(Telemetry.BrainName) : OperatorNoValue();
+					}),
+					TextPrimary(), BodyFont())
 			]
 
 			+ SVerticalBox::Slot()
 			.AutoHeight()
-			.Padding(0.0f, 2.0f, 0.0f, 12.0f)
+			.Padding(0.0f, 4.0f, 0.0f, 0.0f)
+			[
+				SNew(STextBlock)
+				.Font(BodyFont())
+				.AutoWrapText(true)
+				.Visibility_Lambda([this]
+				{
+					return Telemetry.bHasBrainActivity ? EVisibility::Visible : EVisibility::Collapsed;
+				})
+				.ColorAndOpacity_Lambda([this]
+				{
+					return OperatorActivityColour(Telemetry);
+				})
+				.Text_Lambda([this]
+				{
+					return OperatorActivityText(Telemetry);
+				})
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 12.0f, 0.0f, 12.0f)
 			[
 				OperatorDivider()
 			]

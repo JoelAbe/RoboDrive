@@ -7,8 +7,9 @@ void URoboOperatorWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	// On screen, but never in the way: clicks and keys pass through to the game.
-	SetVisibility(ESlateVisibility::HitTestInvisible);
+	// The view itself lets clicks through to the game; only its panels and
+	// buttons can be clicked.
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 }
 
 TSharedRef<SWidget> URoboOperatorWidget::RebuildWidget()
@@ -31,6 +32,6 @@ void URoboOperatorWidget::ReleaseSlateResources(bool bReleaseChildren)
 void URoboOperatorWidget::ToggleShown()
 {
 	SetVisibility(GetVisibility() == ESlateVisibility::Collapsed
-		? ESlateVisibility::HitTestInvisible
+		? ESlateVisibility::SelfHitTestInvisible
 		: ESlateVisibility::Collapsed);
 }

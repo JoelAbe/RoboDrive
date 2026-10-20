@@ -7,6 +7,7 @@
 class UInputAction;
 class UInputMappingContext;
 class URoboOperatorWidget;
+enum class EDriveMode : uint8;
 struct FInputActionValue;
 
 /**
@@ -24,6 +25,12 @@ class ARoboPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+public:
+	/** Operator actions, shared by the keyboard and the operator view's buttons. */
+	void SetDriveMode(EDriveMode Mode);
+	void EngageEmergencyStop();
+	void ReleaseEmergencyStop();
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;

@@ -23,6 +23,14 @@ void ARoboPlayerController::BeginPlay()
 		if (OperatorWidget != nullptr)
 		{
 			OperatorWidget->AddToViewport();
+
+			// The view has buttons, so the mouse stays visible and free to click
+			// them, while the keyboard keeps driving the robot.
+			FInputModeGameAndUI InputMode;
+			InputMode.SetHideCursorDuringCapture(false);
+			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			SetInputMode(InputMode);
+			SetShowMouseCursor(true);
 		}
 	}
 	
@@ -83,6 +91,23 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 	{
 		OperatorWidget->ToggleShown();
 	}
+
+	// Operator keys. Space stops the robot from anywhere; releasing takes the
+	// button in the panel, so a stop cannot be undone by a stray key press.
+	if (WasInputKeyJustPressed(EKeys::SpaceBar))
+	{
+		EngageEmergencyStop();
+	}
+
+	if (WasInputKeyJustPressed(EKeys::One))
+	{
+		SetDriveMode(EDriveMode::Auto);
+	}
+
+	if (WasInputKeyJustPressed(EKeys::Two))
+	{
+		SetDriveMode(EDriveMode::Manual);
+	}
 	
 	ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn());
 	const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this);
@@ -124,4 +149,28 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 	// a released key simply stops arriving rather than needing a release event.
 	DriveInput = 0.0;
 	TurnInput = 0.0;
+}
+
+void ARoboPlayerController::SetDriveMode(EDriveMode Mode)
+{
+	if (ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn()))
+	{
+		Vehicle->SetDriveMode(Mode);
+	}
+}
+
+void ARoboPlayerController::EngageEmergencyStop()
+{
+	if (ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn()))
+	{
+		Vehicle->EngageEmergencyStop();
+	}
+}
+
+void ARoboPlayerController::ReleaseEmergencyStop()
+{
+	if (ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn()))
+	{
+		Vehicle->ReleaseEmergencyStop();
+	}
 }

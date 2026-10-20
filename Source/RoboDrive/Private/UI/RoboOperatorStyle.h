@@ -6,6 +6,7 @@
 #include "Fonts/SlateFontInfo.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/SlateColor.h"
+#include "Styling/SlateTypes.h"
 
 /**
  * The operator view's look, in one place.
@@ -41,6 +42,12 @@ namespace RoboOperatorStyle
 	inline FSlateColor TextPrimary() { return Hex(TEXT("ECE8E1")); }
 	inline FSlateColor TextMuted()   { return Hex(TEXT("8E8A82")); }
 	inline FSlateColor TextFaint()   { return Hex(TEXT("5F5C56")); }
+
+	/** Text on a filled button, dark so it reads on any of the meaning colours. */
+	inline FSlateColor TextOnFill()  { return Hex(TEXT("141518")); }
+
+	/** The fill of a button that is not selected. */
+	inline FSlateColor ControlFill() { return Hex(TEXT("2B2D31")); }
 
 	// Meaning
 	inline FSlateColor Normal()    { return Hex(TEXT("3CC8B4")); }
@@ -79,6 +86,22 @@ namespace RoboOperatorStyle
 	{
 		static const FSlateColorBrush Brush(Divider());
 		return &Brush;
+	}
+
+	/**
+	 * Buttons are drawn white and tinted per button, so one style serves them
+	 * all: a selected mode, an unselected one, and the stop. The brushes differ
+	 * only in opacity, which is what makes hovering and pressing visible.
+	 */
+	inline const FButtonStyle& ButtonStyle()
+	{
+		static const FButtonStyle Style = FButtonStyle()
+			.SetNormal(FSlateRoundedBoxBrush(FLinearColor(1.0f, 1.0f, 1.0f, 0.85f), 6.0f))
+			.SetHovered(FSlateRoundedBoxBrush(FLinearColor::White, 6.0f))
+			.SetPressed(FSlateRoundedBoxBrush(FLinearColor(1.0f, 1.0f, 1.0f, 0.65f), 6.0f))
+			.SetNormalPadding(FMargin(0.0f))
+			.SetPressedPadding(FMargin(0.0f));
+		return Style;
 	}
 
 	/** A white circle, tinted per use to show a status. */

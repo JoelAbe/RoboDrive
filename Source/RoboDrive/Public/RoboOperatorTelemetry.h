@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "RoboBrain.h"
 #include "RoboDriveCommand.h"
 #include "RoboMission.h"
 
@@ -27,8 +28,19 @@ struct FRoboOperatorTelemetry
 	EDriveSource DrivingSource = EDriveSource::None;
 	double CommandLinearMS = 0.0;
 	double CommandAngularRadS = 0.0;
-	double ActualSpeedMS = 0.0;
+	double ActualLinearMS = 0.0;
+	double ActualYawRateRadS = 0.0;
 	FString BrainName;
+	
+	// What the brain is doing, from its last decision
+	bool bHasBrainActivity = false;
+	EBrainActivity BrainActivity = EBrainActivity::Idle;
+	double DeviationDeg = 0.0;
+	double BlockedForSeconds = 0.0;
+
+	// The operator's choices
+	EDriveMode DriveMode = EDriveMode::Auto;
+	bool bStopped = false;
 
 	// The mission, as the robot believes it is going
 	EMissionStatus MissionStatus = EMissionStatus::None;

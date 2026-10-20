@@ -44,7 +44,13 @@ FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* P
 	const FDriveCommand Command = Vehicle->GetActiveCommand();
 	Out.CommandLinearMS = Command.Linear;
 	Out.CommandAngularRadS = Command.Angular;
-	Out.ActualSpeedMS = Vehicle->GetSpeedMS();
+	
+	const FVector ForwardRos = Vehicle->GetRotationRos().RotateVector(FVector::ForwardVector);
+	Out.ActualLinearMS = FVector::DotProduct(Vehicle->GetLinearVelocityMS(), ForwardRos);
+	Out.ActualYawRateRadS = Vehicle->GetAngularVelocityRadS().Z;
+
+	Out.DriveMode = Vehicle->GetDriveMode();
+	Out.bStopped = Vehicle->IsEmergencyStopped();
 
 	Out.BrainName = TEXT("None");
 	if (const URoboAutonomyComponent* Autonomy = Vehicle->FindComponentByClass<URoboAutonomyComponent>())
@@ -52,6 +58,15 @@ FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* P
 		Out.BrainName = Autonomy->bEnabled
 			? UEnum::GetDisplayValueAsText(Autonomy->BrainKind).ToString()
 			: TEXT("Switched off");
+
+		if (Autonomy->bEnabled)
+		{
+			const FBrainOutput& Last = Autonomy->GetLastOutput();
+			Out.bHasBrainActivity = true;
+			Out.BrainActivity = Last.Activity;
+			Out.DeviationDeg = FMath::RadiansToDegrees(Last.DeviationRad);
+			Out.BlockedForSeconds = Last.BlockedForSeconds;
+		}
 	}
 
 	const URoboOdometryComponent* Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>();
