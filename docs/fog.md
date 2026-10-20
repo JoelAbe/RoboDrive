@@ -42,13 +42,11 @@ The slalom at 10 m visibility, the same start, one setting changed. With fog
 echoes on, the robot is boxed in by echoes close around it and barely moves.
 With them off, leaving only the shorter range, it drives through.
 
-<!-- VIDEO: on github.com, edit this file and drag docs/images/github/slalom-fog-default-1280.mp4 onto the next line. -->
 
 
 https://github.com/user-attachments/assets/9cf94eff-7ec6-442e-8e29-2a300fad0240
 
 
-<!-- VIDEO: on github.com, edit this file and drag docs/images/github/slalom-fog-echoless-1280.mp4 onto the next line. -->
 
 
 https://github.com/user-attachments/assets/7a902f67-fafe-449e-8b7a-14f487ca6c3b
