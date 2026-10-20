@@ -4,6 +4,7 @@
 #include "RoboOperatorStyle.h"
 #include "RoboPlayerController.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SSlider.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
@@ -227,6 +228,7 @@ namespace
 					.ColorAndOpacity(TextColour)
 				]
 
+				// Buttons without a shortcut collapse this, so the label stays centred.
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
 				.VAlign(VAlign_Center)
@@ -236,8 +238,103 @@ namespace
 					.Text(Key)
 					.Font(RoboOperatorStyle::LabelFont())
 					.ColorAndOpacity(TextColour)
+					.Visibility(Key.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
 				]
 			];
+	}
+
+	/** A section heading inside a panel. */
+	TSharedRef<SWidget> OperatorSectionLabel(const FText& Text)
+	{
+		return SNew(STextBlock)
+			.Text(Text)
+			.Font(RoboOperatorStyle::LabelFont())
+			.ColorAndOpacity(RoboOperatorStyle::TextMuted());
+	}
+
+	/**
+	 * A labelled slider with its value on the right. Not focusable, for the
+	 * same reason as the buttons: a focused slider would take the arrow keys.
+	 */
+	TSharedRef<SWidget> OperatorSlider(const FText& Label, float Min, float Max,
+		const TAttribute<float>& Value, const TAttribute<FText>& ValueText,
+		const FOnFloatValueChanged& OnChanged)
+	{
+		return SNew(SVerticalBox)
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(Label)
+					.Font(RoboOperatorStyle::BodyFont())
+					.ColorAndOpacity(RoboOperatorStyle::TextPrimary())
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(ValueText)
+					.Font(RoboOperatorStyle::NumberFont())
+					.ColorAndOpacity(RoboOperatorStyle::TextPrimary())
+				]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 4.0f, 0.0f, 0.0f)
+			[
+				SNew(SSlider)
+				.Style(&RoboOperatorStyle::SliderStyle())
+				.MinValue(Min)
+				.MaxValue(Max)
+				.Value(Value)
+				.OnValueChanged(OnChanged)
+				.IsFocusable(false)
+				.SliderBarColor(RoboOperatorStyle::ControlFill())
+				.SliderHandleColor(RoboOperatorStyle::Normal())
+			];
+	}
+
+	/** Two to four mutually exclusive choices, as a row of buttons. */
+	TSharedRef<SWidget> OperatorChoice(const FText& Label, const TAttribute<bool>& bSelected, FOnClicked OnClicked)
+	{
+		return OperatorButton(Label, FText::GetEmpty(),
+			TAttribute<FSlateColor>::CreateLambda([bSelected]
+			{
+				return bSelected.Get() ? RoboOperatorStyle::Normal() : RoboOperatorStyle::ControlFill();
+			}),
+			TAttribute<FSlateColor>::CreateLambda([bSelected]
+			{
+				return bSelected.Get() ? RoboOperatorStyle::TextOnFill() : RoboOperatorStyle::TextPrimary();
+			}),
+			OnClicked);
+	}
+
+	// Visibility spans orders of magnitude, from a few metres to hundreds, so
+	// its slider is logarithmic: moving it the same distance anywhere along
+	// its length multiplies the visibility by the same factor.
+	constexpr double OperatorMinVisibilityM = 5.0;
+	constexpr double OperatorMaxVisibilityM = 200.0;
+
+	double OperatorSliderToVisibility(float Position)
+	{
+		return OperatorMinVisibilityM * FMath::Pow(OperatorMaxVisibilityM / OperatorMinVisibilityM, static_cast<double>(Position));
+	}
+
+	float OperatorVisibilityToSlider(double VisibilityM)
+	{
+		const double Clamped = FMath::Clamp(VisibilityM, OperatorMinVisibilityM, OperatorMaxVisibilityM);
+		return static_cast<float>(FMath::Loge(Clamped / OperatorMinVisibilityM)
+			/ FMath::Loge(OperatorMaxVisibilityM / OperatorMinVisibilityM));
 	}
 }
 
@@ -245,6 +342,7 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 {
 	Player = InArgs._Player;
 	Telemetry = FRoboOperatorTelemetry::Gather(Player.Get());
+	Tuning = FRoboOperatorTuning::Read(Player.Get());
 
 	const float Margin = RoboOperatorStyle::ScreenMargin;
 
@@ -263,7 +361,7 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 			MakeTopBar()
 		]
 
-		// Below it, the robot column on the left and the world everywhere else.
+		// Below it, the robot on the left, tuning on the right, the world between.
 		+ SVerticalBox::Slot()
 		.FillHeight(1.0f)
 		.Padding(Margin, 12.0f, Margin, Margin)
@@ -289,6 +387,17 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 			[
 				SNullWidget::NullWidget
 			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Top)
+			[
+				SNew(SBox)
+				.WidthOverride(RoboOperatorStyle::ColumnWidth)
+				[
+					MakeTuningPanel()
+				]
+			]
 		]
 	];
 }
@@ -298,6 +407,18 @@ void SRoboOperatorView::Tick(const FGeometry& AllottedGeometry, const double InC
 	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
 
 	Telemetry = FRoboOperatorTelemetry::Gather(Player.Get());
+
+	// Read back every frame, so a change made elsewhere, such as in the
+	// editor's Details panel, shows here too.
+	Tuning = FRoboOperatorTuning::Read(Player.Get());
+}
+
+void SRoboOperatorView::ChangeTuning(TFunctionRef<void(FRoboOperatorTuning&)> Change)
+{
+	FRoboOperatorTuning Changed = Tuning;
+	Change(Changed);
+	Changed.Apply(Player.Get());
+	Tuning = Changed;
 }
 
 TSharedRef<SWidget> SRoboOperatorView::MakeTopBar()
@@ -768,6 +889,280 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 						]
 					]
 				]
+			]
+		];
+}
+
+TSharedRef<SWidget> SRoboOperatorView::MakeTuningPanel()
+{
+	using namespace RoboOperatorStyle;
+
+	return SNew(SBorder)
+		.BorderImage(PanelBrush())
+		.Padding(PanelPadding)
+		[
+			SNew(SVerticalBox)
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(STextBlock)
+				.Text(INVTEXT("Tuning"))
+				.Font(TitleFont())
+				.ColorAndOpacity(TextPrimary())
+			]
+
+			// Which brain drives.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 14.0f, 0.0f, 6.0f)
+			[
+				OperatorSectionLabel(INVTEXT("Brain"))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					OperatorChoice(INVTEXT("Go to goal"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.BrainKind == EBrainKind::GoToGoal; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.BrainKind = EBrainKind::GoToGoal; });
+							return FReply::Handled();
+						}))
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(6.0f, 0.0f, 0.0f, 0.0f)
+				[
+					OperatorChoice(INVTEXT("Avoiding"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.BrainKind == EBrainKind::Avoiding; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.BrainKind = EBrainKind::Avoiding; });
+							return FReply::Handled();
+						}))
+				]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 14.0f, 0.0f, 0.0f)
+			[
+				OperatorSlider(INVTEXT("Max speed"), 0.1f, 1.0f,
+					TAttribute<float>::CreateLambda([this] { return static_cast<float>(Tuning.MaxSpeedMS); }),
+					TAttribute<FText>::CreateLambda([this]
+					{
+						return FText::FromString(FString::Printf(TEXT("%.2f m/s"), Tuning.MaxSpeedMS));
+					}),
+					FOnFloatValueChanged::CreateLambda([this](float NewValue)
+					{
+						ChangeTuning([NewValue](FRoboOperatorTuning& T) { T.MaxSpeedMS = NewValue; });
+					}))
+			]
+
+			// How far ahead avoidance looks, and how much room it leaves. Used
+			// only by the avoiding brain.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 12.0f, 0.0f, 0.0f)
+			[
+				OperatorSlider(INVTEXT("Avoidance lookahead"), 0.5f, 3.0f,
+					TAttribute<float>::CreateLambda([this] { return static_cast<float>(Tuning.LookaheadM); }),
+					TAttribute<FText>::CreateLambda([this]
+					{
+						return FText::FromString(FString::Printf(TEXT("%.1f m"), Tuning.LookaheadM));
+					}),
+					FOnFloatValueChanged::CreateLambda([this](float NewValue)
+					{
+						ChangeTuning([NewValue](FRoboOperatorTuning& T) { T.LookaheadM = NewValue; });
+					}))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 12.0f, 0.0f, 0.0f)
+			[
+				OperatorSlider(INVTEXT("Avoidance margin"), 0.0f, 0.5f,
+					TAttribute<float>::CreateLambda([this] { return static_cast<float>(Tuning.MarginM); }),
+					TAttribute<FText>::CreateLambda([this]
+					{
+						return FText::FromString(FString::Printf(TEXT("%.2f m"), Tuning.MarginM));
+					}),
+					FOnFloatValueChanged::CreateLambda([this](float NewValue)
+					{
+						ChangeTuning([NewValue](FRoboOperatorTuning& T) { T.MarginM = NewValue; });
+					}))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 16.0f, 0.0f, 12.0f)
+			[
+				OperatorDivider()
+			]
+
+			// The weather, and how the lidar copes with it.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 0.0f, 0.0f, 6.0f)
+			[
+				OperatorSectionLabel(INVTEXT("Weather"))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					OperatorChoice(INVTEXT("Clear"),
+						TAttribute<bool>::CreateLambda([this] { return !Tuning.bFog; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bFog = false; });
+							return FReply::Handled();
+						}))
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(6.0f, 0.0f, 0.0f, 0.0f)
+				[
+					OperatorChoice(INVTEXT("Fog"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.bFog; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bFog = true; });
+							return FReply::Handled();
+						}))
+				]
+			]
+
+			// Only meaningful in fog, so only shown in fog.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 12.0f, 0.0f, 0.0f)
+			[
+				SNew(SBox)
+				.Visibility_Lambda([this] { return Tuning.bFog ? EVisibility::Visible : EVisibility::Collapsed; })
+				[
+					OperatorSlider(INVTEXT("Visibility"), 0.0f, 1.0f,
+						TAttribute<float>::CreateLambda([this] { return OperatorVisibilityToSlider(Tuning.VisibilityM); }),
+						TAttribute<FText>::CreateLambda([this]
+						{
+							return FText::FromString(FString::Printf(TEXT("%.0f m"), Tuning.VisibilityM));
+						}),
+						FOnFloatValueChanged::CreateLambda([this](float NewValue)
+						{
+							// Whole metres: finer steps mean nothing in fog, and
+							// each change to the weather is logged.
+							const double VisibilityM = FMath::RoundToDouble(OperatorSliderToVisibility(NewValue));
+							ChangeTuning([VisibilityM](FRoboOperatorTuning& T) { T.VisibilityM = VisibilityM; });
+						}))
+				]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 12.0f, 0.0f, 0.0f)
+			[
+				OperatorSlider(INVTEXT("Lidar fog echoes"), 0.0f, 0.3f,
+					TAttribute<float>::CreateLambda([this] { return static_cast<float>(Tuning.FogEchoFraction); }),
+					TAttribute<FText>::CreateLambda([this]
+					{
+						return FText::FromString(FString::Printf(TEXT("%.2f"), Tuning.FogEchoFraction));
+					}),
+					FOnFloatValueChanged::CreateLambda([this](float NewValue)
+					{
+						ChangeTuning([NewValue](FRoboOperatorTuning& T) { T.FogEchoFraction = NewValue; });
+					}))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 16.0f, 0.0f, 12.0f)
+			[
+				OperatorDivider()
+			]
+
+			// What is drawn in the 3D world. The panels replace the floating
+			// text readouts, so those start hidden.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 0.0f, 0.0f, 6.0f)
+			[
+				OperatorSectionLabel(INVTEXT("Show in the world"))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(SUniformGridPanel)
+				.SlotPadding(FMargin(0.0f, 0.0f, 6.0f, 6.0f))
+
+				+ SUniformGridPanel::Slot(0, 0)
+				[
+					OperatorChoice(INVTEXT("Lidar rays"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.bShowLidarRays; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bShowLidarRays = !T.bShowLidarRays; });
+							return FReply::Handled();
+						}))
+				]
+
+				+ SUniformGridPanel::Slot(1, 0)
+				[
+					OperatorChoice(INVTEXT("Paths"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.bShowPaths; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bShowPaths = !T.bShowPaths; });
+							return FReply::Handled();
+						}))
+				]
+
+				+ SUniformGridPanel::Slot(0, 1)
+				[
+					OperatorChoice(INVTEXT("Heading"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.bShowHeading; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bShowHeading = !T.bShowHeading; });
+							return FReply::Handled();
+						}))
+				]
+
+				+ SUniformGridPanel::Slot(1, 1)
+				[
+					OperatorChoice(INVTEXT("Readouts"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.bShowReadouts; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bShowReadouts = !T.bShowReadouts; });
+							return FReply::Handled();
+						}))
+				]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 10.0f, 0.0f, 0.0f)
+			[
+				SNew(STextBlock)
+				.Text(INVTEXT("Changes apply at once. Changing a brain setting restarts the brain."))
+				.Font(LabelFont())
+				.ColorAndOpacity(TextFaint())
+				.AutoWrapText(true)
 			]
 		];
 }

@@ -104,6 +104,25 @@ namespace RoboOperatorStyle
 		return Style;
 	}
 
+	/**
+	 * Sliders, drawn white and tinted per slider like the buttons: the bar in
+	 * the control colour, the handle in the meaning colour.
+	 */
+	inline const FSliderStyle& SliderStyle()
+	{
+		static const FSlateRoundedBoxBrush Bar(FLinearColor::White, 2.0f);
+		static const FSlateRoundedBoxBrush Thumb(FLinearColor::White, 6.0f, FVector2f(12.0f, 12.0f));
+		static const FSliderStyle Style = FSliderStyle()
+			.SetNormalBarImage(Bar)
+			.SetHoveredBarImage(Bar)
+			.SetDisabledBarImage(Bar)
+			.SetNormalThumbImage(Thumb)
+			.SetHoveredThumbImage(Thumb)
+			.SetDisabledThumbImage(Thumb)
+			.SetBarThickness(4.0f);
+		return Style;
+	}
+
 	/** A white circle, tinted per use to show a status. */
 	inline const FSlateBrush* DotBrush()
 	{
