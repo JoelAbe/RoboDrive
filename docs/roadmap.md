@@ -93,8 +93,10 @@ parameters and understand what the robot is doing.
 The [operator view](operator-view.md) shows telemetry, the brain's current
 activity and ground truth set apart, with Auto and Manual modes and an
 emergency stop ([ADR 0013](decisions/0013-operator-modes-and-emergency-stop.md),
-[ADR 0014](decisions/0014-operator-view-in-slate.md)). Still to come: tuning
-from the panel, a top-down lidar view, setting goals by clicking, and a test
+[ADR 0014](decisions/0014-operator-view-in-slate.md)). The brain, avoidance and
+weather can be tuned from the panel, and scenarios chosen, restarted and
+unloaded there ([ADR 0015](decisions/0015-scenario-loading-in-the-simulation.md)).
+Still to come: a top-down lidar view, setting goals by clicking, and a test
 with someone who has not seen the project.
 
 ## Phase 6: ROS 2 adapter

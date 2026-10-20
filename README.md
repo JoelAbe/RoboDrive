@@ -139,11 +139,14 @@ All design decisions are recorded in [docs/decisions](docs/decisions/README.md).
 While playing, panels over the game view show who is driving, command against
 actual motion, what the brain is doing and why, the mission, the sensor
 conditions, and, set apart, how far the robot's belief has drifted from the
-truth. **1** and **2** switch between automatic and manual driving, **Space**
-is an emergency stop, and **Tab** hides the panels. See
+truth. Scenarios can be picked from the `Scenarios/` folder and restarted, and
+the brain, avoidance and weather tuned, without the editor. **1** and **2**
+switch between automatic and manual driving, **Space** is an emergency stop,
+**R** restarts the scenario, and **Tab** hides the panels. See
 [the operator view](docs/operator-view.md).
 ([ADR 0013](docs/decisions/0013-operator-modes-and-emergency-stop.md),
-[ADR 0014](docs/decisions/0014-operator-view-in-slate.md))
+[ADR 0014](docs/decisions/0014-operator-view-in-slate.md),
+[ADR 0015](docs/decisions/0015-scenario-loading-in-the-simulation.md))
 
 ## External API
 

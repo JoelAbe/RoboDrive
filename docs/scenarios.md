@@ -139,3 +139,8 @@ the world. To run the whole suite headless,
 as CI does, use `./Tools/RunScenarios.ps1`.
 
 The operations these scripts use are described in the [API reference](api.md).
+
+While playing in the editor, the [operator view](operator-view.md) can also
+load any file in `Scenarios/`, restart the current one, or unload it. The
+list is read when it is opened, so a file added during play appears without
+restarting.

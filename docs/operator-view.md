@@ -12,12 +12,13 @@ leave the middle clear for the world. **Tab** hides and shows them.
 | **1** | Auto mode: the robot's brain drives, and you can take over by driving. |
 | **2** | Manual mode: only you drive. Let go and the robot stops. |
 | **Space** | Emergency stop. Releasing it takes the button in the top bar. |
+| **R** | Restart the current scenario. |
 | **Tab** | Hide or show the panels. |
 
 ## The top bar
 
-The state of the simulation: whether it is running, the simulated time, and
-how fast it runs against the wall clock. Below 1x, the simulation cannot keep
+The state of the simulation: whether it is running, which scenario is loaded,
+the simulated time, and how fast it runs against the wall clock. Below 1x, the simulation cannot keep
 up.
 
 On the right are the mode buttons and the emergency stop. The selected mode is
@@ -41,6 +42,39 @@ From top to bottom:
 - **Ground truth**: how far odometry has drifted from where the robot really is.
   The simulation knows this and the robot does not, so it is boxed and labelled
   as never shown to the robot.
+
+## The scenario panel
+
+At the top of the right-hand column. **Choose** lists every file in
+`Scenarios/`, read afresh each time it opens, plus **None**. Picking a file
+builds its world; picking None removes the current scenario and returns the
+robot to where it spawned. If a file cannot be loaded, the reason is shown
+beneath the list.
+
+**Restart**, or R, starts the current scenario from the beginning, restoring
+its goal and weather even if they were changed since. Simulation time keeps
+running rather than rewinding, because sensors have already scheduled their
+next samples against it.
+
+## The tuning panel
+
+Below the scenario panel. Every change applies at once.
+
+- **Brain**: Go to goal, or Avoiding.
+- **Max speed**, **avoidance lookahead** and **avoidance margin**. Changing a
+  brain setting rebuilds the brain, so it forgets what it remembered: whether
+  it had arrived, and how long it had been boxed in.
+- **Weather**: Clear or Fog. In fog, the **visibility** slider runs from 5 m to
+  200 m on a logarithmic scale, because visibility matters across orders of
+  magnitude. **Lidar fog echoes** sets how readily the lidar mistakes fog for a
+  target; at zero, fog only shortens its range. Setting it to zero in thick fog
+  shows the finding in [fog.md](fog.md): the robot recovers.
+- **Show in the world**: lidar rays, the odometry and true paths, the brain's
+  chosen heading, and the floating text readouts, which start hidden because
+  the panels show the same information.
+
+The panel reads the settings back every frame, so a change made in the
+editor's Details panel shows here too.
 
 ## Colours
 

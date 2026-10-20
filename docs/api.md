@@ -68,6 +68,7 @@ Result: `{"pong": "RoboDrive"}`
 | `mission.status` | `none`, `active`, `arrived` or `failed` |
 | `mission.goal` | The current goal, `{x, y, tolerance_m}`, present only when one is set |
 | `visibility_m` | Fog visibility, m, or `null` in clear air |
+| `scenario` | Name of the scenario last loaded, or `null` if none is |
 
 `arrived` means whatever is driving **believes** it has reached the goal. It is
 a claim, not a verdict: a test should still check `get_ground_truth`.
@@ -202,6 +203,29 @@ inherits another's goal.
 The same holds for the weather: a scenario with `visibility_m` sets fog, and
 one without it clears the air.
 
+The simulator remembers the scenario once it has loaded, so
+`restart_scenario` can start it again. The operator view loads scenarios
+through the same code, so a scenario loaded either way is the current one for
+both.
+
+### `restart_scenario`
+
+Starts the current scenario again from the beginning: obstacles rebuilt, the
+robot at its start pose with fresh dead reckoning, and the goal and weather as
+the scenario specifies them, undoing any change made since. With no scenario
+loaded, the robot returns to where it spawned.
+
+Result: `{"name": ...}`, or `{"name": null}` when there was no scenario.
+
+As with `reset`, simulation time is not rewound.
+
+### `unload_scenario`
+
+Removes the current scenario: its obstacles, goal and fog. The robot returns
+to where it spawned, and the world is as the level built it.
+
+Result: `{"unloaded": true}`
+
 ### `set_goal`
 
 Gives the robot somewhere to go. The mission becomes `active`.
@@ -251,6 +275,7 @@ stays open.
 | `unknown op '...'` | No such operation |
 | `simulation subsystem unavailable` | The world is not running a simulation |
 | `mission subsystem unavailable` | The world has no mission subsystem |
+| `scenario subsystem unavailable` | The world has no scenario subsystem |
 | `no robot in the world` | The operation needs a robot and there is none |
 | `a step is already in progress` | A second `step` arrived before the first completed |
 | `set_command needs both v and w` | A drive command was missing a velocity |
