@@ -65,6 +65,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDrawReadout = true;
 
+	/** What the brain decided most recently. For display; nothing should steer by it. */
+	const FBrainOutput& GetLastOutput() const { return LastOutput; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,

@@ -34,6 +34,7 @@ FBrainOutput FAvoidingBrain::Update(const FBrainInputs& Inputs)
 	if (!Inputs.bHasScan)
 	{
 		Output.Command = RoboDiffDrive::FBodyVelocity();
+		Output.Activity = EBrainActivity::WaitingForScan;
 		return Output;
 	}
 
@@ -56,6 +57,13 @@ FBrainOutput FAvoidingBrain::Update(const FBrainInputs& Inputs)
 		BlockedSinceSeconds.Reset();
 		Output.Command = FGoToGoalBrain::SteerTowards(Heading.GetValue(), DistanceM, GoToGoalSettings);
 		Output.ChosenHeadingRad = Heading;
+
+		// The search tries the goal's own bearing first, so a clear line to the
+		// goal gives a deviation of exactly zero; the tolerance only absorbs rounding.
+		Output.DeviationRad = RoboFrames::WrapRadians(Heading.GetValue() - GoalBearingRad);
+		Output.Activity = FMath::IsNearlyZero(Output.DeviationRad, UE_KINDA_SMALL_NUMBER)
+			? EBrainActivity::DrivingToGoal
+			: EBrainActivity::SteeringAround;
 		return Output;
 	}
 
@@ -65,6 +73,8 @@ FBrainOutput FAvoidingBrain::Update(const FBrainInputs& Inputs)
 		BlockedSinceSeconds = Inputs.SimTimeSeconds;
 	}
 
+	Output.BlockedForSeconds = Inputs.SimTimeSeconds - BlockedSinceSeconds.GetValue();
+	
 	if (Inputs.SimTimeSeconds - BlockedSinceSeconds.GetValue() > AvoidanceSettings.BlockedTimeoutS)
 	{
 		// Admitting failure is far better than the alternative: pushing against
@@ -72,6 +82,7 @@ FBrainOutput FAvoidingBrain::Update(const FBrainInputs& Inputs)
 		// the brain confidently reports arriving somewhere it never reached.
 		Output.Command = RoboDiffDrive::FBodyVelocity();
 		Output.Status = EMissionStatus::Failed;
+		Output.Activity = EBrainActivity::GaveUp;
 		return Output;
 	}
 
@@ -79,5 +90,7 @@ FBrainOutput FAvoidingBrain::Update(const FBrainInputs& Inputs)
 	// viewpoint may reveal a gap the current one cannot see.
 	Output.Command.Linear = 0.0;
 	Output.Command.Angular = (GoalBearingRad >= 0.0 ? 0.5 : -0.5) * GoToGoalSettings.MaxTurnRadS;
+	Output.Activity = EBrainActivity::BoxedIn;
+	
 	return Output;
 }

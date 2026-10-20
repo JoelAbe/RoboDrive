@@ -56,6 +56,8 @@ bool FAvoidingOpenSpaceTest::RunTest(const FString& Parameters)
 		WithAvoidance.Command.Linear, Without.Command.Linear, RoboTest::Tolerance);
 	TestNearlyEqual(TEXT("Same turn as go-to-goal"),
 		WithAvoidance.Command.Angular, Without.Command.Angular, RoboTest::Tolerance);
+	TestTrue(TEXT("Says it is heading straight for the goal"),
+	WithAvoidance.Activity == EBrainActivity::DrivingToGoal);
 	return true;
 }
 
@@ -72,6 +74,8 @@ bool FAvoidingSteersAroundTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("A heading was chosen"), Output.ChosenHeadingRad.IsSet());
 	TestTrue(TEXT("It is not straight at the goal"), FMath::Abs(Output.ChosenHeadingRad.Get(0.0)) > 0.01);
 	TestTrue(TEXT("The robot turns"), FMath::Abs(Output.Command.Angular) > 0.01);
+	TestTrue(TEXT("Says it is steering around"), Output.Activity == EBrainActivity::SteeringAround);
+	TestNearlyEqual(TEXT("And by how much"), Output.DeviationRad, Output.ChosenHeadingRad.Get(0.0), 1e-9);
 	return true;
 }
 
@@ -90,6 +94,7 @@ bool FAvoidingNoScanTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Still has a mission"), Output.Status, EMissionStatus::Active);
 	TestNearlyEqual(TEXT("Does not drive"), Output.Command.Linear, 0.0, RoboTest::Tolerance);
 	TestNearlyEqual(TEXT("Does not turn"), Output.Command.Angular, 0.0, RoboTest::Tolerance);
+	TestTrue(TEXT("Says it is waiting for a scan"), Output.Activity == EBrainActivity::WaitingForScan);
 	return true;
 }
 
@@ -105,15 +110,18 @@ bool FAvoidingBoxedInTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Keeps trying at first"), First.Status, EMissionStatus::Active);
 	TestNearlyEqual(TEXT("Does not drive into the ring"), First.Command.Linear, 0.0, RoboTest::Tolerance);
 	TestTrue(TEXT("Turns to look for a way out"), FMath::Abs(First.Command.Angular) > 0.01);
+	TestTrue(TEXT("Says it is boxed in"), First.Activity == EBrainActivity::BoxedIn);
 
 	// Still boxed in at t = 3: within the 5 s timeout, still trying.
-	TestEqual(TEXT("Still trying before the timeout"),
-		Brain.Update(AvoidingInputs(5.0, 0.0, AvoidingRing(), 3.0)).Status, EMissionStatus::Active);
+	const FBrainOutput Middle = Brain.Update(AvoidingInputs(5.0, 0.0, AvoidingRing(), 3.0));
+	TestEqual(TEXT("Still trying before the timeout"), Middle.Status, EMissionStatus::Active);
+	TestNearlyEqual(TEXT("Knows how long it has been boxed in"), Middle.BlockedForSeconds, 3.0, RoboTest::Tolerance);
 
 	// Still boxed in at t = 6: past the timeout. Give up honestly.
 	const FBrainOutput Last = Brain.Update(AvoidingInputs(5.0, 0.0, AvoidingRing(), 6.0));
 	TestEqual(TEXT("Reports failure rather than pretending"), Last.Status, EMissionStatus::Failed);
 	TestNearlyEqual(TEXT("And stops"), Last.Command.Angular, 0.0, RoboTest::Tolerance);
+	TestTrue(TEXT("Says it gave up"), Last.Activity == EBrainActivity::GaveUp);
 	return true;
 }
 
@@ -125,8 +133,10 @@ bool FAvoidingArrivesTest::RunTest(const FString& Parameters)
 	// Already at the goal with an obstacle just beyond it: arrival wins.
 	// Obstacles only matter while travelling.
 	FAvoidingBrain Brain = MakeAvoidingBrain();
-	TestEqual(TEXT("Arrived, regardless of the obstacle"),
-		Brain.Update(AvoidingInputs(0.2, 0.0, { FVector2D(0.5, 0.0) })).Status, EMissionStatus::Arrived);
+	const FBrainOutput Output = Brain.Update(AvoidingInputs(0.2, 0.0, { FVector2D(0.5, 0.0) }));
+
+	TestEqual(TEXT("Arrived, regardless of the obstacle"), Output.Status, EMissionStatus::Arrived);
+	TestTrue(TEXT("Says it is at the goal"), Output.Activity == EBrainActivity::Arrived);
 	return true;
 }
 

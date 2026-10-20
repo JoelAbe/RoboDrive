@@ -75,6 +75,7 @@ FBrainOutput FGoToGoalBrain::Update(const FBrainInputs& Inputs)
 	{
 		bArrived = true;
 		Output.Status = EMissionStatus::Arrived;
+		Output.Activity = EBrainActivity::Arrived;
 		return Output;
 	}
 
@@ -88,5 +89,6 @@ FBrainOutput FGoToGoalBrain::Update(const FBrainInputs& Inputs)
 	Output.Command = SteerTowards(HeadingError, Distance, Settings);
 
 	Output.Status = EMissionStatus::Active;
+	Output.Activity = EBrainActivity::DrivingToGoal;
 	return Output;
 }

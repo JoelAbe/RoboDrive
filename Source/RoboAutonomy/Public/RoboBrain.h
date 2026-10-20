@@ -33,6 +33,32 @@ struct FBrainInputs
 	bool bHasGoal = false;
 };
 
+/** What a brain is doing, for a person watching. Never used to make decisions. */
+enum class EBrainActivity : uint8
+{
+	/** No goal to pursue. */
+	Idle,
+
+	/** Has a goal but no lidar scan yet, so holds still. */
+	WaitingForScan,
+
+	/** Heading straight for the goal. */
+	DrivingToGoal,
+
+	/** Heading off the goal's line to get around something. */
+	SteeringAround,
+
+	/** No clear heading: turning on the spot to look for one. */
+	BoxedIn,
+
+	/** Boxed in for too long, and the mission reported failed. */
+	GaveUp,
+
+	/** At the goal. */
+	Arrived
+};
+
+
 /** What a brain decided. */
 struct FBrainOutput
 {
@@ -48,6 +74,15 @@ struct FBrainOutput
 	 * rather than inferring it from how the wheels moved.
 	 */
 	TOptional<double> ChosenHeadingRad;
+
+	/** What the brain is doing, and the details that go with it. For display only. */
+	EBrainActivity Activity = EBrainActivity::Idle;
+
+	/** While steering around: how far the chosen heading is from the goal's, rad. Positive is left. */
+	double DeviationRad = 0.0;
+
+	/** While boxed in: for how long so far, s. */
+	double BlockedForSeconds = 0.0;
 };
 
 /**
