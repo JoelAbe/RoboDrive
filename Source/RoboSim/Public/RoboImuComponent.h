@@ -78,7 +78,13 @@ private:
 	FImuSample LatestSample;
 	FRandomStream NoiseStream;
 
+	/** Velocity at the last tick, and when, for working out acceleration once per tick. */
 	FVector PreviousVelocityMS = FVector::ZeroVector;
+	double PreviousVelocityTimeSeconds = 0.0;
+
+	/** Acceleration over the last tick, shared by every sample taken in it. */
+	FVector TickAccelerationMS2 = FVector::ZeroVector;
+
 	double NextSampleTimeSeconds = 0.0;
 	double GyroHeadingRad = 0.0;
 	bool bHasPreviousVelocity = false;

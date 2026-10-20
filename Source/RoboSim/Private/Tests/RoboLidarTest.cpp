@@ -47,4 +47,27 @@ bool FLidarNoReturnTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLidarFullCircleTest,
+	"RoboDrive.RoboSim.Lidar.FullCircle", RoboTest::Flags)
+
+bool FLidarFullCircleTest::RunTest(const FString& Parameters)
+{
+	// A spinning lidar of 4 beams: forward, left, behind, right. Spaced as a
+	// partial sweep, the last beam would land on the first and one direction
+	// would be measured twice while another was never measured at all.
+	const double FullCircle = UE_DOUBLE_TWO_PI;
+
+	TestNearlyEqual(TEXT("A quarter turn apart"),
+		RoboLidar::BeamIncrementRad(4, FullCircle), UE_DOUBLE_HALF_PI, 1e-9);
+	TestNearlyEqual(TEXT("The first beam points behind"),
+		RoboLidar::BeamAngleRad(0, 4, FullCircle), -UE_DOUBLE_PI, 1e-9);
+	TestNearlyEqual(TEXT("The last beam is a quarter turn short of the first, not on it"),
+		RoboLidar::BeamAngleRad(3, 4, FullCircle), UE_DOUBLE_HALF_PI, 1e-9);
+
+	// A partial sweep still puts its first and last beams on the edges.
+	TestNearlyEqual(TEXT("A 180 degree sweep still ends on its edge"),
+		RoboLidar::BeamAngleRad(4, 5, UE_DOUBLE_PI), UE_DOUBLE_HALF_PI, 1e-9);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

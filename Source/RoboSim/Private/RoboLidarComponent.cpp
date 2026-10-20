@@ -63,7 +63,7 @@ void URoboLidarComponent::Sweep(double NowSeconds)
 
 	LatestScan.RangesM.SetNum(BeamCount);
 	LatestScan.AngleMinRad = -0.5 * SpanRad;
-	LatestScan.AngleIncrementRad = BeamCount > 1 ? SpanRad / (BeamCount - 1) : 0.0;
+	LatestScan.AngleIncrementRad = RoboLidar::BeamIncrementRad(BeamCount, SpanRad);
 	LatestScan.RangeMinM = RangeMinM;
 	LatestScan.RangeMaxM = RangeMaxM;
 	LatestScan.TimeSeconds = NowSeconds;
@@ -132,7 +132,7 @@ void URoboLidarComponent::Sweep(double NowSeconds)
 
 		LatestScan.RangesM[Index] = RangeM;
 
-				if (bDrawScan)
+		if (bDrawScan)
 		{
 			const bool bReturned = RoboLidar::HasReturn(RangeM);
 			const double DrawLengthUU = bReturned ? RangeM * RoboFrames::UUPerMeter : MaxRangeUU;

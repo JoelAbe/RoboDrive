@@ -33,11 +33,31 @@ if (-not $SkipBuild) {
 }
 
 # --- 2. Run the tests headless ---------------------------------------------------
+# Remove the previous run's log first. Otherwise an editor that fails to start
+# leaves the old log in place, and its results would be read as this run's.
+if (Test-Path $LogFile) {
+    Remove-Item $LogFile -Force
+}
+
 Write-Host "Running tests matching '$Filter'..." -ForegroundColor Cyan
 & "$EngineDir\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "$Project" `
     -ExecCmds="Automation RunTests $Filter; Quit" `
     -unattended -nopause -nosplash -NullRHI -NoSound `
     -ABSLOG="$LogFile" | Out-Null
+$EditorExitCode = $LASTEXITCODE
+
+if (-not (Test-Path $LogFile)) {
+    Write-Host "The editor wrote no log (exit code $EditorExitCode). It probably failed to start." -ForegroundColor Red
+    exit 1
+}
+
+# The automation system logs this line only once every queued test has run.
+# Without it, the editor stopped partway, for example by crashing, and the
+# passes logged so far must not be mistaken for a complete run.
+if (-not (Select-String -Path $LogFile -Pattern "TEST COMPLETE\. EXIT CODE:" -Quiet)) {
+    Write-Host "The test run did not finish (editor exit code $EditorExitCode). See $LogFile" -ForegroundColor Red
+    exit 1
+}
 
 # --- 3. Read the results from the log ----------------------------------------------
 # Same "Test Completed. Result={...}" lines you saw in the Output Log.

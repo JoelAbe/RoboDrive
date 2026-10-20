@@ -33,8 +33,33 @@ void URoboAutonomyComponent::BeginPlay()
 	Lidar = Vehicle->FindComponentByClass<URoboLidarComponent>();
 	RebuildBrain();
 
+	// The vehicle announces resets rather than calling the brain itself,
+	// because RoboSim cannot know RoboAutonomy exists.
+	RobotResetHandle = Vehicle->OnRobotReset().AddUObject(this, &URoboAutonomyComponent::HandleRobotReset);
+
 	UE_LOG(LogRoboAutonomy, Log, TEXT("Autonomy running on %s at %.0f Hz"),
 		*Vehicle->GetName(), UpdateRateHz);
+}
+
+void URoboAutonomyComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (Vehicle != nullptr)
+	{
+		Vehicle->OnRobotReset().Remove(RobotResetHandle);
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void URoboAutonomyComponent::HandleRobotReset()
+{
+	// Without this, memory from the old situation carries over: a boxed-in
+	// timer that started before a restart would count against the new start.
+	if (Brain.IsValid())
+	{
+		Brain->Reset();
+	}
+	LastOutput = FBrainOutput();
 }
 
 TUniquePtr<FRoboBrain> URoboAutonomyComponent::MakeBrain() const

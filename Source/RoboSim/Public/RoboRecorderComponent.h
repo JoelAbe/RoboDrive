@@ -27,7 +27,7 @@ public:
 	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Recording")
 	void StartRecording();
 
-	/** Stop and write the file. Returns the path written, or empty on failure. */
+	/** Stop and write the file. Where it was written, or why it could not be, goes to the log. */
 	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Recording")
 	void StopRecording();
 

@@ -9,7 +9,11 @@ enum class ESimClockMode : uint8
 	/** Sim time follows real time, in whole fixed steps. Used while driving. */
 	RealTime = 0	UMETA(DisplayName = "Real Time"),
 
-	/** Sim time only advances when something asks. Used by tests and replay. */
+	/**
+	 * Sim time only advances when something asks, through Step. Tested, but
+	 * not yet used outside tests: it is what a lockstep API, one where a
+	 * client's step really is the only thing that moves time, would build on.
+	 */
 	Synchronous = 1	UMETA(DisplayName = "Synchronous")
 };
 

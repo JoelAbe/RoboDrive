@@ -14,8 +14,8 @@ class UTextureRenderTarget2D;
  * pixels and scene complexity rather than with sample count.
  *
  * Pixels are not read back to the CPU. Nothing consumes images yet, and a
- * readback is the expensive part: Phase 3 adds it when the external API needs
- * to send frames to a client.
+ * readback is the expensive part, so it waits until something does: the
+ * external API does not serve camera frames.
  */
 UCLASS(ClassGroup = (Robo), meta = (BlueprintSpawnableComponent))
 class ROBOSIM_API URoboCameraComponent : public USceneCaptureComponent2D

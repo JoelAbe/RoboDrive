@@ -1,6 +1,6 @@
 """Load a scenario file into the running simulation.
 
-    python Tools/analysis/load_scenario.py Scenarios/corridor.json
+    python Tools/Analysis/load_scenario.py Scenarios/corridor.json
 
 Reads the file here and sends its contents, so the simulation never needs
 access to this machine's filesystem.

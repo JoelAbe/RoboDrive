@@ -47,11 +47,25 @@ namespace RoboLidar
 	}
 
 	/**
-	 * Angle of beam Index, rad, counter-clockwise from forward.
+	 * Angle between neighbouring beams, rad.
 	 *
 	 * A sweep of N beams across a span is divided into N-1 gaps so the first
-	 * and last beams land exactly on the edges of the span.
+	 * and last beams land exactly on the edges of the span. A full circle has
+	 * no edges: divided that way, its first and last beams would point the
+	 * same way, so it is divided into N gaps instead.
 	 */
+	inline double BeamIncrementRad(int32 BeamCount, double AngularSpanRad)
+	{
+		if (BeamCount <= 1)
+		{
+			return 0.0;
+		}
+
+		const bool bFullCircle = AngularSpanRad >= UE_DOUBLE_TWO_PI - UE_DOUBLE_KINDA_SMALL_NUMBER;
+		return AngularSpanRad / (bFullCircle ? BeamCount : BeamCount - 1);
+	}
+
+	/** Angle of beam Index, rad, counter-clockwise from forward. */
 	inline double BeamAngleRad(int32 Index, int32 BeamCount, double AngularSpanRad)
 	{
 		if (BeamCount <= 1)
@@ -59,8 +73,7 @@ namespace RoboLidar
 			return 0.0;
 		}
 
-		const double Increment = AngularSpanRad / (BeamCount - 1);
-		return -0.5 * AngularSpanRad + Index * Increment;
+		return -0.5 * AngularSpanRad + Index * BeamIncrementRad(BeamCount, AngularSpanRad);
 	}
 
 	/** Direction of a beam in the sensor's frame, REP-103 (+Y left). */

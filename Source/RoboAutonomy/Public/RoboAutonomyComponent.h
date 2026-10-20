@@ -10,18 +10,6 @@ class ARoboVehicle;
 class URoboLidarComponent;
 class URoboOdometryComponent;
 
-/**
- * Runs a brain on the robot.
- *
- * At a fixed rate on the simulation clock it builds a snapshot of what the
- * robot could know, asks the brain what to do, submits the command as the
- * Autonomy source and reports the brain's status to the mission.
- *
- * Attached in the editor rather than created by the vehicle, because RoboSim
- * cannot reference RoboAutonomy: the brain attaches to the body, never the
- * other way round.
- */
-
 /** Which brain the robot runs. */
 UENUM(BlueprintType)
 enum class EBrainKind : uint8
@@ -33,6 +21,17 @@ enum class EBrainKind : uint8
 	Avoiding = 1	UMETA(DisplayName = "Avoiding")
 };
 
+/**
+ * Runs a brain on the robot.
+ *
+ * At a fixed rate on the simulation clock it builds a snapshot of what the
+ * robot could know, asks the brain what to do, submits the command as the
+ * Autonomy source and reports the brain's status to the mission.
+ *
+ * Attached in the editor rather than created by the vehicle, because RoboSim
+ * cannot reference RoboAutonomy: the brain attaches to the body, never the
+ * other way round.
+ */
 UCLASS(ClassGroup = (Robo), meta = (BlueprintSpawnableComponent))
 class ROBOAUTONOMY_API URoboAutonomyComponent : public UActorComponent
 {
@@ -74,12 +73,17 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
 	/** Create a brain from the current settings. */
 	TUniquePtr<FRoboBrain> MakeBrain() const;
+
+	/** The robot was moved to a new start: forget what the brain remembered about the old one. */
+	void HandleRobotReset();
+	FDelegateHandle RobotResetHandle;
 
 	/**
 	 * Build the brain's view of the world. The only code that touches the

@@ -86,8 +86,8 @@ struct FBrainOutput
 };
 
 /**
- * Anything that can drive the robot from its sensors: go-to-goal now, obstacle
- * avoidance next.
+ * Anything that can drive the robot from its sensors: go-to-goal, and
+ * go-to-goal with lidar obstacle avoidance.
  *
  * Plain C++ rather than a UObject, because a brain is pure decision logic.
  * Tests can construct one, hand it a made-up snapshot and check what it decides,

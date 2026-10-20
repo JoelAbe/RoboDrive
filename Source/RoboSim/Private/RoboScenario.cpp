@@ -329,6 +329,9 @@ void URoboScenarioSubsystem::TeleportRobot(ARoboVehicle& Vehicle, const FVector&
 	{
 		Imu->ResetImu();
 	}
+
+	// Commands and a brain's memory belong to the old situation.
+	Vehicle.NotifyReset();
 }
 
 double URoboScenarioSubsystem::GroundHeightUU(double XUU, double YUU) const

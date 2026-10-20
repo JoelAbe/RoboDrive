@@ -112,8 +112,8 @@ struct FWheelContact
  * The component's own transform is the suspension anchor: where the wheel is
  * mounted on the chassis. Moving the component in the editor moves the wheel.
  * The vehicle drives the update rather than the component ticking itself, so
- * wheel order is deterministic and there is one place to change when this
- * moves onto the physics tick in Phase 2.
+ * wheel order is deterministic and there is one place that sets when wheels
+ * update (ADR 0006 keeps that on the actor tick).
  */
 UCLASS(ClassGroup = (Robo), meta = (BlueprintSpawnableComponent))
 class ROBOSIM_API URoboWheel : public USceneComponent
@@ -160,7 +160,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wheel", meta = (ClampMin = "0.0"))
 	double GripCoefficient = 1.0;
 
-	/** Measured longitudinal speed at the contact patch, m/s. Phase 2 encoders read this. */
+	/** Measured longitudinal speed at the contact patch, m/s. Recorded for slip analysis; the encoders read commanded rotation instead. */
 	UPROPERTY(BlueprintReadOnly, Category = "Wheel")
 	double MeasuredSpeedMS = 0.0;
 

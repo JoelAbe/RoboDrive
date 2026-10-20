@@ -28,7 +28,9 @@ from pathlib import Path
 
 from robodrive_client import DEFAULT_HOST, DEFAULT_PORT, SimClient
 
-# Control and observation run at 10 Hz: 12 steps of the 120 Hz simulation.
+# Control and observation run at about 10 Hz: each round waits for 12 steps of
+# the 120 Hz simulation. About, because step is advance-and-wait, not lockstep:
+# the simulation keeps running while this script reads and decides.
 STEPS_PER_COMMAND = 12
 
 # The harness controller. Deliberately well inside the robot's limits, so a
@@ -45,7 +47,7 @@ DRIVERS = ("robot", "harness")
 
 
 def wrap_angle(angle: float) -> float:
-    """Wrap to (-pi, pi], so turning left by 350 degrees becomes right by 10."""
+    """Wrap to [-pi, pi), so turning left by 350 degrees becomes right by 10."""
     return (angle + math.pi) % (2.0 * math.pi) - math.pi
 
 

@@ -1,17 +1,15 @@
 ﻿#include "RoboSimClock.h"
-#include "Misc/AutomationTest.h"
+#include "RoboTestCommon.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
 namespace
 {
-	constexpr EAutomationTestFlags RoboTestFlags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
-
 	constexpr double ClockTolerance = 1e-12;
 	constexpr double ClockStep = 0.01;   // 100 Hz, easy arithmetic
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockStartsAtZeroTest, "RoboDrive.RoboSim.Clock.StartsAtZero", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockStartsAtZeroTest, "RoboDrive.RoboSim.Clock.StartsAtZero", RoboTest::Flags)
 
 bool FSimClockStartsAtZeroTest::RunTest(const FString& Parameters)
 {
@@ -21,7 +19,7 @@ bool FSimClockStartsAtZeroTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockTakesWholeStepsTest, "RoboDrive.RoboSim.Clock.TakesWholeSteps", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockTakesWholeStepsTest, "RoboDrive.RoboSim.Clock.TakesWholeSteps", RoboTest::Flags)
 
 bool FSimClockTakesWholeStepsTest::RunTest(const FString& Parameters)
 {
@@ -34,7 +32,7 @@ bool FSimClockTakesWholeStepsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockCarriesRemainderTest, "RoboDrive.RoboSim.Clock.CarriesRemainder", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockCarriesRemainderTest, "RoboDrive.RoboSim.Clock.CarriesRemainder", RoboTest::Flags)
 
 bool FSimClockCarriesRemainderTest::RunTest(const FString& Parameters)
 {
@@ -48,7 +46,7 @@ bool FSimClockCarriesRemainderTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockLimitsCatchUpTest, "RoboDrive.RoboSim.Clock.LimitsCatchUp", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockLimitsCatchUpTest, "RoboDrive.RoboSim.Clock.LimitsCatchUp", RoboTest::Flags)
 
 bool FSimClockLimitsCatchUpTest::RunTest(const FString& Parameters)
 {
@@ -64,7 +62,7 @@ bool FSimClockLimitsCatchUpTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockSynchronousIgnoresRealTimeTest, "RoboDrive.RoboSim.Clock.SynchronousIgnoresRealTime", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockSynchronousIgnoresRealTimeTest, "RoboDrive.RoboSim.Clock.SynchronousIgnoresRealTime", RoboTest::Flags)
 
 bool FSimClockSynchronousIgnoresRealTimeTest::RunTest(const FString& Parameters)
 {
@@ -74,7 +72,7 @@ bool FSimClockSynchronousIgnoresRealTimeTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Real time does not move a synchronous clock"), Clock.Advance(1.0), 0);
 	TestNearlyEqual(TEXT("Still at zero"), Clock.GetTimeSeconds(), 0.0, ClockTolerance);
 
-	// Only an explicit step moves it, which is what a test client will drive.
+	// Only an explicit step moves it, which is what a lockstep client would drive.
 	TestEqual(TEXT("Explicit stepping works"), Clock.Step(5), 5);
 	TestNearlyEqual(TEXT("Five steps of time passed"), Clock.GetTimeSeconds(), 0.05, ClockTolerance);
 	return true;
@@ -85,7 +83,7 @@ bool FSimClockSynchronousIgnoresRealTimeTest::RunTest(const FString& Parameters)
  * drift. Accumulating 1/120 a hundred thousand times would be visibly wrong by
  * the end; this is the test that would catch a change back to +=.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockDoesNotDriftTest, "RoboDrive.RoboSim.Clock.DoesNotDrift", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockDoesNotDriftTest, "RoboDrive.RoboSim.Clock.DoesNotDrift", RoboTest::Flags)
 
 bool FSimClockDoesNotDriftTest::RunTest(const FString& Parameters)
 {
@@ -99,7 +97,7 @@ bool FSimClockDoesNotDriftTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockResetTest, "RoboDrive.RoboSim.Clock.Reset", RoboTestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimClockResetTest, "RoboDrive.RoboSim.Clock.Reset", RoboTest::Flags)
 
 bool FSimClockResetTest::RunTest(const FString& Parameters)
 {

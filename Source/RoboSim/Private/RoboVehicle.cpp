@@ -254,6 +254,12 @@ bool ARoboVehicle::IsEmergencyStopped() const
 	return Arbiter.IsStopped();
 }
 
+void ARoboVehicle::NotifyReset()
+{
+	Arbiter.Reset();
+	RobotResetEvent.Broadcast();
+}
+
 double ARoboVehicle::GetWheelSeparationM() const
 {
 	if (Wheels.Num() < 2)

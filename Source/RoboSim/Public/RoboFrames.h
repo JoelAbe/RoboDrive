@@ -105,7 +105,7 @@ namespace RoboFrames
 	}
 	
 	/**
-	 * Wrap an angle to (-pi, pi), in full double precision.
+	 * Wrap an angle to (-pi, pi], in full double precision.
 	 *
 	 * FMath::UnwindRadians is templated on the type but subtracts the float
 	 * constant UE_TWO_PI, which injects roughly 3e-8 rad per wrap. That is

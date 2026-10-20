@@ -28,7 +28,7 @@ from pathlib import Path
 from robodrive_client import DEFAULT_HOST, DEFAULT_PORT, SimClient
 from run_scenarios import Outcome, run_scenario_data
 
-# Thinning fog, from light haze to dense fog. Clear air is always run first,
+# Thickening fog, from light haze to dense fog. Clear air is always run first,
 # as the baseline every other row is compared with.
 DEFAULT_VISIBILITIES = [100.0, 50.0, 30.0, 20.0, 15.0, 10.0]
 

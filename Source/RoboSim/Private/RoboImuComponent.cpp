@@ -36,6 +36,8 @@ void URoboImuComponent::ResetImu()
 	NoiseStream.Initialize(RandomSeed);
 	LatestSample = FImuSample();
 	PreviousVelocityMS = FVector::ZeroVector;
+	PreviousVelocityTimeSeconds = 0.0;
+	TickAccelerationMS2 = FVector::ZeroVector;
 	bHasPreviousVelocity = false;
 
 	if (Vehicle != nullptr)
@@ -64,6 +66,26 @@ void URoboImuComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	const double IntervalSeconds = 1.0 / SampleRateHz;
 	const double NowSeconds = Sim->GetSimTimeSeconds();
 
+	// Acceleration by differencing velocity, once per tick. The physics solver
+	// does not hand out acceleration directly, and a real IMU is differentiating
+	// motion too. It must be once per tick, not once per sample: physics
+	// updates velocity once per frame, while the IMU samples faster than that,
+	// so differencing per sample would put a whole frame's change into the
+	// first sample and leave every later one in the frame reading zero.
+	const FVector VelocityMS = Vehicle->GetLinearVelocityMS();
+	if (bHasPreviousVelocity && NowSeconds > PreviousVelocityTimeSeconds)
+	{
+		TickAccelerationMS2 = (VelocityMS - PreviousVelocityMS) / (NowSeconds - PreviousVelocityTimeSeconds);
+		PreviousVelocityMS = VelocityMS;
+		PreviousVelocityTimeSeconds = NowSeconds;
+	}
+	else if (!bHasPreviousVelocity)
+	{
+		PreviousVelocityMS = VelocityMS;
+		PreviousVelocityTimeSeconds = NowSeconds;
+		bHasPreviousVelocity = true;
+	}
+
 	int32 Samples = 0;
 	while (NowSeconds >= NextSampleTimeSeconds && Samples < ImuMaxSamplesPerTick)
 	{
@@ -85,21 +107,9 @@ void URoboImuComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void URoboImuComponent::SampleOnce(double DeltaSeconds, double NowSeconds)
 {
-	const FVector VelocityMS = Vehicle->GetLinearVelocityMS();
-
-	// Acceleration by differencing velocity. The physics solver does not hand
-	// out acceleration directly, and a real IMU is differentiating motion too.
-	FVector WorldAccelerationMS2 = FVector::ZeroVector;
-	if (bHasPreviousVelocity && DeltaSeconds > 0.0)
-	{
-		WorldAccelerationMS2 = (VelocityMS - PreviousVelocityMS) / DeltaSeconds;
-	}
-	PreviousVelocityMS = VelocityMS;
-	bHasPreviousVelocity = true;
-
 	const FQuat BodyRotation = Vehicle->GetRotationRos();
 
-	const FVector IdealAccel = RoboImu::ProperAcceleration(WorldAccelerationMS2, BodyRotation);
+	const FVector IdealAccel = RoboImu::ProperAcceleration(TickAccelerationMS2, BodyRotation);
 	const FVector IdealGyro = RoboImu::BodyAngularVelocity(Vehicle->GetAngularVelocityRadS(), BodyRotation);
 
 	LatestSample.AccelerationMS2 =

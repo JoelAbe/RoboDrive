@@ -42,8 +42,20 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Robot|Operator")
 	bool IsEmergencyStopped() const;
+
+	/**
+	 * The robot has been moved to a new start, by a reset or a scenario.
+	 * Forgets every submitted command, keeping the operator's mode and
+	 * emergency stop, and tells whatever is listening, such as a brain, to
+	 * forget what it remembered about the old situation.
+	 */
+	void NotifyReset();
+
+	/** Broadcast by NotifyReset. A plain C++ event, so listeners bind in C++. */
+	DECLARE_MULTICAST_DELEGATE(FOnRobotReset);
+	FOnRobotReset& OnRobotReset() { return RobotResetEvent; }
 	
-	/** Temporary: drive from the Details panel before input exists. */
+	/** Drive at a fixed command set in the Details panel, as an External source. For testing without a client. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bUseDebugCommand = false;
 
@@ -153,7 +165,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Robot")
 	TObjectPtr<class URoboReplayComponent> Replayer;
 	
-	/** Third-person view. Superseded by the operator view in Phase 5. */
+	/** Third-person follow view: the view the operator panels sit over. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "View")
 	TObjectPtr<class USpringArmComponent> CameraBoom;
 
@@ -162,6 +174,7 @@ protected:
 
 private:
 	FDriveArbiter Arbiter;
+	FOnRobotReset RobotResetEvent;
 	RoboDiffDrive::FWheelSpeeds LastWheelSpeeds;
 	FDriveCommand LastCommand;
 };

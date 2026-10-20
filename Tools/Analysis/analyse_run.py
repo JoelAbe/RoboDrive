@@ -3,7 +3,7 @@
 Reads one or more run CSVs, prints a summary table, and writes plots
 comparing wheel odometry and gyroscope dead reckoning against ground truth.
 
-    python Tools/analysis/analyse_run.py Saved/RoboDrive/Runs/run_*.csv --out docs/images
+    python Tools/Analysis/analyse_run.py Saved/RoboDrive/Runs/run_*.csv --out docs/images
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ import pandas as pd
 REQUIRED_COLUMNS = frozenset({
     "time_s", "travelled_m", "pos_error_m", "heading_error_rad",
     "true_x_m", "true_y_m", "odom_x_m", "odom_y_m", "speed_ms",
+    "gyro_heading_error_rad",
 })
 
 
@@ -35,7 +36,8 @@ def read_run(path: Path) -> tuple[pd.DataFrame, dict[str, str]]:
         )
 
     return frame, read_metadata(path)
-    
+
+
 def read_metadata(path: Path) -> dict[str, str]:
     """Parse the leading '#' comment lines into key=value pairs.
 
@@ -52,10 +54,6 @@ def read_metadata(path: Path) -> dict[str, str]:
                 if separator:
                     metadata[key] = value
     return metadata
-
-
-def read_run(path: Path) -> tuple[pd.DataFrame, dict[str, str]]:
-    return pd.read_csv(path, comment="#"), read_metadata(path)
 
 
 @dataclass(frozen=True)
@@ -167,6 +165,7 @@ def plot_heading_error(runs: list[tuple[str, pd.DataFrame]], out_dir: Path) -> P
     plt.close(figure)
     return output
 
+
 def plot_slip(runs: list[tuple[str, pd.DataFrame]], out_dir: Path) -> Path:
     """Commanded minus measured wheel speed: the part odometry cannot see."""
     figure, axes = plt.subplots(figsize=(9, 5.5))
@@ -190,7 +189,8 @@ def plot_slip(runs: list[tuple[str, pd.DataFrame]], out_dir: Path) -> Path:
     figure.savefig(output, dpi=150, bbox_inches="tight")
     plt.close(figure)
     return output
-    
+
+
 def print_summaries(summaries: list[Summary]) -> None:
     header = f"{'run':<28}{'time s':>9}{'dist m':>9}{'drift m':>9}{'drift %':>9}{'max m':>8}{'odom deg':>10}{'gyro deg':>10}"
     print(header)
@@ -229,6 +229,10 @@ def main() -> None:
         print(f"wrote {plot_paths(frame, name, args.out)}")
     print(f"wrote {plot_drift_vs_distance(loaded, args.out)}")
     print(f"wrote {plot_heading_error(loaded, args.out)}")
+
+    # Only runs recorded since the measured wheel speeds were added carry them.
+    if any("meas_wheel_l_ms" in frame for _, frame in loaded):
+        print(f"wrote {plot_slip(loaded, args.out)}")
 
 
 if __name__ == "__main__":

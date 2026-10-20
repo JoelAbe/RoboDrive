@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "RoboWeather.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "RoboApiSubsystem.generated.h"
 
@@ -16,8 +15,9 @@ class FJsonObject;
  * polled on the game thread, which keeps actor access free of thread-safety
  * questions at the cost of throughput this does not need.
  *
- * Binds to 127.0.0.1 only. There is no authentication, and a simulator that
- * accepts drive commands from the network should not be reachable from it.
+ * Binds to 127.0.0.1 by default. There is no authentication, and a simulator
+ * that accepts drive commands from the network should not be reachable from
+ * it, so binding to any other address is allowed but logged as a warning.
  */
 UCLASS()
 class ROBOAPI_API URoboApiSubsystem : public UTickableWorldSubsystem
@@ -66,5 +66,5 @@ private:
 	/** A step request waits for the clock rather than answering immediately. */
 	bool bStepPending = false;
 	int64 StepTargetCount = 0;
-	int32 StepRequestId = 0;
+	double StepRequestId = 0.0;
 };

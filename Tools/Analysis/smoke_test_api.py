@@ -3,7 +3,7 @@
 Checks each operation, then drives the robot in a client-controlled loop: send
 a command, advance a fixed number of simulation steps, repeat.
 
-    python Tools/analysis/smoke_test_api.py
+    python Tools/Analysis/smoke_test_api.py
 
 The simulation must be playing: the API only exists while a game world does.
 """

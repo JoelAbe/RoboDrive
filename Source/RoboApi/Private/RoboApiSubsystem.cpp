@@ -14,6 +14,7 @@
 #include "RoboVehicle.h"
 #include "RoboMission.h"
 #include "RoboScenario.h"
+#include "RoboWeather.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Sockets.h"
@@ -462,9 +463,10 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		Request->TryGetNumberField(TEXT("steps"), RequestedSteps);
 
 		StepTargetCount = Sim->GetStepCount() + FMath::Max(1, FMath::RoundToInt(RequestedSteps));
-		double StepId = 0.0;
-		Request->TryGetNumberField(TEXT("id"), StepId);
-		StepRequestId = static_cast<int32>(StepId);
+		// Kept as the number it arrived as, so the reply echoes exactly the
+		// same id as every other reply would.
+		StepRequestId = 0.0;
+		Request->TryGetNumberField(TEXT("id"), StepRequestId);
 		bStepPending = true;
 		bOutDeferred = true;
 		return true;
@@ -737,9 +739,27 @@ void URoboApiSubsystem::SendResponse(const TSharedRef<FJsonObject>& Response)
 	FJsonSerializer::Serialize(Response, Writer);
 	Serialised.AppendChar(LineTerminator);
 	
+	// A non-blocking socket may accept only part of a message in one call, so
+	// keep sending the rest. If it accepts nothing, the client has stopped
+	// reading; a message cut short would break the one-per-line framing for
+	// everything after it, so the connection is dropped rather than corrupted.
 	const FTCHARToUTF8 Utf8(*Serialised);
-	int32 BytesSent = 0;
-	ClientSocket->Send(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length(), BytesSent);
+	const uint8* Data = reinterpret_cast<const uint8*>(Utf8.Get());
+	int32 Remaining = Utf8.Length();
+
+	while (Remaining > 0)
+	{
+		int32 BytesSent = 0;
+		if (!ClientSocket->Send(Data, Remaining, BytesSent) || BytesSent <= 0)
+		{
+			UE_LOG(LogRoboApi, Warning, TEXT("Could not send a whole reply; dropping the client."));
+			CloseClient();
+			return;
+		}
+
+		Data += BytesSent;
+		Remaining -= BytesSent;
+	}
 }
 
 ARoboVehicle* URoboApiSubsystem::FindVehicle()
