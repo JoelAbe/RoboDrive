@@ -6,8 +6,12 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
+#include "RoboScenario.h"
+#include "RoboScenarioFiles.h"
 #include "Blueprint/UserWidget.h"
+#include "Dom/JsonObject.h"
 #include "Misc/App.h"
+#include "Misc/Paths.h"
 #include "RoboOperatorWidget.h"
 #include "RoboSimSubsystem.h"
 
@@ -108,6 +112,11 @@ void ARoboPlayerController::PlayerTick(float DeltaTime)
 	{
 		SetDriveMode(EDriveMode::Manual);
 	}
+
+	if (WasInputKeyJustPressed(EKeys::R))
+	{
+		RestartScenario();
+	}
 	
 	ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn());
 	const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this);
@@ -172,5 +181,39 @@ void ARoboPlayerController::ReleaseEmergencyStop()
 	if (ARoboVehicle* Vehicle = Cast<ARoboVehicle>(GetPawn()))
 	{
 		Vehicle->ReleaseEmergencyStop();
+	}
+}
+
+bool ARoboPlayerController::LoadScenarioFile(const FString& FileName, FString& OutError)
+{
+	URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(this);
+	if (Scenarios == nullptr)
+	{
+		OutError = TEXT("no simulation running");
+		return false;
+	}
+
+	const TSharedPtr<FJsonObject> Scenario = RoboScenarioFiles::Read(FileName, OutError);
+
+	// The file's name stands in for a scenario that does not name itself.
+	if (!Scenario.IsValid()
+		|| !Scenarios->Load(Scenario.ToSharedRef(), OutError, FPaths::GetBaseFilename(FileName)))
+	{
+		UE_LOG(LogRoboDrive, Warning, TEXT("Could not load scenario %s: %s"), *FileName, *OutError);
+		return false;
+	}
+
+	return true;
+}
+
+void ARoboPlayerController::RestartScenario()
+{
+	if (URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(this))
+	{
+		FString Error;
+		if (!Scenarios->Restart(Error))
+		{
+			UE_LOG(LogRoboDrive, Warning, TEXT("Could not restart: %s"), *Error);
+		}
 	}
 }

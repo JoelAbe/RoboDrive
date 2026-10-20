@@ -7,12 +7,13 @@
 #include "Widgets/SCompoundWidget.h"
 
 class APlayerController;
+class SVerticalBox;
 
 /**
  * Everything the operator sees, laid over the game view.
  *
- * A top bar across the screen, a column on the left for the robot and one on
- * the right for tuning. The rest is left empty, so the world shows through:
+ * A top bar across the screen, a column on the left for the robot, and one on
+ * the right for choosing a scenario and tuning. The rest is left empty, so the world shows through:
  * the panels cover the view rather than shrinking it.
  *
  * Telemetry and tuning are read once per frame in Tick, and everything on
@@ -34,6 +35,13 @@ private:
 	TSharedRef<SWidget> MakeTopBar();
 	TSharedRef<SWidget> MakeRobotPanel();
 	TSharedRef<SWidget> MakeTuningPanel();
+	TSharedRef<SWidget> MakeScenarioPanel();
+
+	/** Re-read the Scenarios folder and rebuild the list of buttons. */
+	void RefreshScenarioList();
+
+	/** Load a scenario file through the player controller, and close the list. */
+	void LoadScenarioFile(const FString& FileName);
 
 	/** Change one or more settings, apply them to the robot, and keep the result. */
 	void ChangeTuning(TFunctionRef<void(FRoboOperatorTuning&)> Change);
@@ -41,4 +49,11 @@ private:
 	TWeakObjectPtr<APlayerController> Player;
 	FRoboOperatorTelemetry Telemetry;
 	FRoboOperatorTuning Tuning;
+
+	/** The list of scenario files, rebuilt each time it is opened. */
+	TSharedPtr<SVerticalBox> ScenarioList;
+	bool bScenarioListOpen = false;
+
+	/** Why the last scenario failed to load, shown until the next attempt. */
+	FText ScenarioError;
 };

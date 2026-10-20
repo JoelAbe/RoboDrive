@@ -7,6 +7,7 @@
 #include "RoboSimSubsystem.h"
 #include "RoboVehicle.h"
 #include "RoboWeather.h"
+#include "RoboScenario.h"
 
 FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* Player)
 {
@@ -28,6 +29,12 @@ FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* P
 	{
 		Out.bHasFog = Weather->HasFog();
 		Out.VisibilityM = Weather->GetVisibilityM();
+	}
+
+	if (const URoboScenarioSubsystem* Scenarios = URoboScenarioSubsystem::Get(Player))
+	{
+		Out.bHasScenario = Scenarios->HasScenario();
+		Out.ScenarioName = Scenarios->GetScenarioName();
 	}
 
 	// The robot is whatever this player is controlling.

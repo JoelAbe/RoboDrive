@@ -30,6 +30,12 @@ public:
 	void SetDriveMode(EDriveMode Mode);
 	void EngageEmergencyStop();
 	void ReleaseEmergencyStop();
+
+	/** Load a file from the Scenarios folder. Returns false and fills OutError if it cannot. */
+	bool LoadScenarioFile(const FString& FileName, FString& OutError);
+
+	/** Start the current scenario again, or with none loaded return the robot to its spawn. */
+	void RestartScenario();
 	
 protected:
 	virtual void BeginPlay() override;

@@ -3,6 +3,7 @@
 #include "GameFramework/PlayerController.h"
 #include "RoboOperatorStyle.h"
 #include "RoboPlayerController.h"
+#include "RoboScenarioFiles.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SSlider.h"
 #include "Widgets/Layout/SBorder.h"
@@ -388,6 +389,7 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 				SNullWidget::NullWidget
 			]
 
+			// Choosing a scenario above, tuning below.
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
 			.VAlign(VAlign_Top)
@@ -395,7 +397,20 @@ void SRoboOperatorView::Construct(const FArguments& InArgs)
 				SNew(SBox)
 				.WidthOverride(RoboOperatorStyle::ColumnWidth)
 				[
-					MakeTuningPanel()
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						MakeScenarioPanel()
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.0f, 12.0f, 0.0f, 0.0f)
+					[
+						MakeTuningPanel()
+					]
 				]
 			]
 		]
@@ -465,6 +480,21 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTopBar()
 						return INVTEXT("No simulation");
 					}
 					return Telemetry.bStopped ? INVTEXT("Emergency stop") : INVTEXT("Simulating");
+				})
+			]
+
+			// Which scenario is running, if any.
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(16.0f, 0.0f, 0.0f, 0.0f)
+			[
+				SNew(STextBlock)
+				.Font(BodyFont())
+				.ColorAndOpacity(TextMuted())
+				.Text_Lambda([this]
+				{
+					return Telemetry.bHasScenario ? FText::FromString(Telemetry.ScenarioName) : INVTEXT("No scenario");
 				})
 			]
 
@@ -1165,4 +1195,176 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTuningPanel()
 				.AutoWrapText(true)
 			]
 		];
+}
+
+TSharedRef<SWidget> SRoboOperatorView::MakeScenarioPanel()
+{
+	using namespace RoboOperatorStyle;
+
+	return SNew(SBorder)
+		.BorderImage(PanelBrush())
+		.Padding(PanelPadding)
+		[
+			SNew(SVerticalBox)
+
+			// The current scenario, and the controls for it.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				.VAlign(VAlign_Center)
+				[
+					OperatorField(INVTEXT("Scenario"),
+						TAttribute<FText>::CreateLambda([this]
+						{
+							return Telemetry.bHasScenario ? FText::FromString(Telemetry.ScenarioName) : INVTEXT("None loaded");
+						}),
+						TextPrimary(), BodyFont())
+				]
+
+				// Opens and closes the list below, like a dropdown that pushes
+				// the panel down rather than floating over it.
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					OperatorButton(
+						TAttribute<FText>::CreateLambda([this]
+						{
+							return bScenarioListOpen ? INVTEXT("Close") : INVTEXT("Choose");
+						}),
+						FText::GetEmpty(), ControlFill(), TextPrimary(),
+						FOnClicked::CreateLambda([this]
+						{
+							bScenarioListOpen = !bScenarioListOpen;
+							if (bScenarioListOpen)
+							{
+								// Read the folder now, so a file added since
+								// the last look appears without restarting.
+								RefreshScenarioList();
+							}
+							return FReply::Handled();
+						}))
+				]
+
+				// Start the current scenario over. With none loaded, the robot
+				// goes back to where it spawned.
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(6.0f, 0.0f, 0.0f, 0.0f)
+				[
+					OperatorButton(INVTEXT("Restart"), INVTEXT("R"), ControlFill(), TextPrimary(),
+						FOnClicked::CreateLambda([this]
+						{
+							if (ARoboPlayerController* Controller = OperatorController(Player))
+							{
+								Controller->RestartScenario();
+							}
+							return FReply::Handled();
+						}))
+				]
+			]
+
+			// The scenario files, one button each. Collapsed until opened.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 10.0f, 0.0f, 0.0f)
+			[
+				SAssignNew(ScenarioList, SVerticalBox)
+				.Visibility_Lambda([this]
+				{
+					return bScenarioListOpen ? EVisibility::Visible : EVisibility::Collapsed;
+				})
+			]
+
+			// Why the last load failed, such as malformed JSON in a file.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 6.0f, 0.0f, 0.0f)
+			[
+				SNew(STextBlock)
+				.Font(BodyFont())
+				.ColorAndOpacity(Stop())
+				.AutoWrapText(true)
+				.Text_Lambda([this] { return ScenarioError; })
+				.Visibility_Lambda([this]
+				{
+					return ScenarioError.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible;
+				})
+			]
+		];
+}
+
+void SRoboOperatorView::RefreshScenarioList()
+{
+	if (!ScenarioList.IsValid())
+	{
+		return;
+	}
+
+	ScenarioList->ClearChildren();
+
+	const TArray<FString> Files = RoboScenarioFiles::List();
+	if (Files.IsEmpty())
+	{
+		ScenarioList->AddSlot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(FString::Printf(TEXT("No .json files in %s"), *RoboScenarioFiles::Directory())))
+			.Font(RoboOperatorStyle::BodyFont())
+			.ColorAndOpacity(RoboOperatorStyle::TextMuted())
+			.AutoWrapText(true)
+		];
+		return;
+	}
+
+	for (const FString& File : Files)
+	{
+		// Shown without ".json", and filled when it is the one running. A
+		// scenario's own name usually matches its file name, which is what
+		// the operator sees in the folder.
+		const FString Stem = FPaths::GetBaseFilename(File);
+
+		ScenarioList->AddSlot()
+		.AutoHeight()
+		.Padding(0.0f, 0.0f, 0.0f, 4.0f)
+		[
+			OperatorChoice(FText::FromString(Stem),
+				TAttribute<bool>::CreateLambda([this, Stem]
+				{
+					return Telemetry.bHasScenario && Telemetry.ScenarioName == Stem;
+				}),
+				FOnClicked::CreateLambda([this, File]
+				{
+					LoadScenarioFile(File);
+					return FReply::Handled();
+				}))
+		];
+	}
+}
+
+void SRoboOperatorView::LoadScenarioFile(const FString& FileName)
+{
+	ARoboPlayerController* Controller = OperatorController(Player);
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	FString Error;
+	if (Controller->LoadScenarioFile(FileName, Error))
+	{
+		ScenarioError = FText::GetEmpty();
+		bScenarioListOpen = false;
+	}
+	else
+	{
+		// Leave the list open, so another can be picked straight away.
+		ScenarioError = FText::FromString(FString::Printf(TEXT("%s: %s"), *FileName, *Error));
+	}
 }

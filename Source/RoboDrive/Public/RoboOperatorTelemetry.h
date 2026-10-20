@@ -22,6 +22,10 @@ struct FRoboOperatorTelemetry
 	double SimTimeSeconds = 0.0;
 	double RealTimeFactor = 0.0;
 
+	// The scenario running, if any
+	bool bHasScenario = false;
+	FString ScenarioName;
+	
 	// Robot and driving
 	bool bHasRobot = false;
 	FString RobotName;
