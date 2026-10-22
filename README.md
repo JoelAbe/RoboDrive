@@ -8,7 +8,7 @@ A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, an external API, and a scenario test suite that runs in CI.
 
-> **Status:** Phase 4 complete; Phase 5 built, awaiting its user test. The
+> **Status:** Phases 0 to 5 of 6 complete. The
 > robot drives from velocity commands through real differential-drive
 > kinematics on Chaos physics, carries wheel encoders, an IMU, a lidar and a
 > camera on a simulated clock, and estimates its own pose by dead reckoning.
@@ -153,7 +153,8 @@ truth. Scenarios can be picked from the `Scenarios/` folder and restarted, and
 the brain, avoidance and weather tuned, without the editor. **1** and **2**
 switch between automatic and manual driving, **Space** is an emergency stop,
 **R** restarts the scenario, and **Tab** hides the panels. See
-[the operator view](docs/operator-view.md).
+[the operator view](docs/operator-view.md), and
+[how a newcomer got on with it](docs/operator-view-test.md).
 ([ADR 0013](docs/decisions/0013-operator-modes-and-emergency-stop.md),
 [ADR 0014](docs/decisions/0014-operator-view-in-slate.md),
 [ADR 0015](docs/decisions/0015-scenario-loading-in-the-simulation.md))
@@ -213,8 +214,9 @@ What this does not do yet, and what would come next:
   commanded rotation, so slip is likely overstated.
   ([ADR 0004](docs/decisions/0004-raycast-wheel-vehicle-model.md))
 - **The camera renders but is not served** over the API.
-- **The operator view's user test is still to be run**, which is what Phase 5
-  is judged by.
+- **The operator view was tested with one newcomer**, informally: enough to
+  show it can be understood unaided, not to measure how well.
+  ([the test](docs/operator-view-test.md))
 
 ## Layout
 

@@ -121,3 +121,6 @@ emergency stop are rules in the arbiter
 ([ADR 0013](decisions/0013-operator-modes-and-emergency-stop.md)).
 
 The view is not created in headless runs, where nothing is rendered.
+
+It was tested with someone who had never seen the project; see
+[the newcomer test](operator-view-test.md).

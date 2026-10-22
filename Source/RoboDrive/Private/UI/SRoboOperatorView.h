@@ -12,9 +12,10 @@ class SVerticalBox;
 /**
  * Everything the operator sees, laid over the game view.
  *
- * A top bar across the screen, a column on the left for the robot, one on the
- * right for choosing a scenario and tuning, and the lidar view at the bottom. The rest is left empty, so the world shows through:
- * the panels cover the view rather than shrinking it.
+ * A top bar across the screen, a column on the left with the robot at its top
+ * and the lidar view at its foot, and one on the right for choosing a scenario
+ * and tuning. The rest is left empty, so the world shows through: the panels
+ * cover the view rather than shrinking it.
  *
  * Telemetry and tuning are read once per frame in Tick, and everything on
  * screen reads from those copies, so all of it describes the same moment.

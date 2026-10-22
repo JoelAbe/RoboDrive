@@ -10,7 +10,7 @@ phase is not done until its tests and documentation exist.
 | 2 | Sensors, odometry, deterministic time, record and replay | Done |
 | 3 | External simulation API and data-driven scenarios | Done |
 | 4 | In-engine autonomy, judged by the scenario suite | Done |
-| 5 | Operator view | In progress |
+| 5 | Operator view | Done |
 | 6 | ROS 2 adapter (software-in-the-loop) | Not started |
 
 ## Phase 0: Foundations
@@ -97,8 +97,9 @@ emergency stop ([ADR 0013](decisions/0013-operator-modes-and-emergency-stop.md),
 weather can be tuned from the panel, and scenarios chosen, restarted and
 unloaded there ([ADR 0015](decisions/0015-scenario-loading-in-the-simulation.md)).
 A top-down lidar view shows what the brain sees, and goals can be set by
-clicking the floor. Still to come: the test the phase is defined by, with
-someone who has not seen the project.
+clicking the floor. Someone who had never seen the project completed every task
+of the [newcomer test](operator-view-test.md) unaided; the one hesitation,
+finding that a click sets a goal, led to a more prominent hint.
 
 ## Phase 6: ROS 2 adapter
 

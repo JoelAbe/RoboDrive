@@ -946,9 +946,16 @@ TSharedRef<SWidget> SRoboOperatorView::MakeRobotPanel()
 			.AutoHeight()
 			.Padding(0.0f, 6.0f, 0.0f, 0.0f)
 			[
+				// In the user test, finding out that a click sets a goal was the
+				// one thing that took a while. So with no goal the hint is in
+				// full-strength text, where it is noticed; once a goal has been
+				// set, the operator knows, and it fades back.
 				SNew(STextBlock)
 				.Font(LabelFont())
-				.ColorAndOpacity(TextFaint())
+				.ColorAndOpacity_Lambda([this]
+				{
+					return Telemetry.bHasGoal ? TextFaint() : TextPrimary();
+				})
 				.OverflowPolicy(ETextOverflowPolicy::Ellipsis)
 				.Text(INVTEXT("Click the floor for a goal, right-click to clear"))
 			]

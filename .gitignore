@@ -85,8 +85,9 @@ DerivedDataCache/*
 *.venv/
 __pycache__/
 
-# Demo videos are uploaded through GitHub's web editor rather than committed:
+# Demo videos and GIFs are uploaded or hosted elsewhere rather than committed:
 # video in git weighs down every clone, and does not play inline from the repo.
 # The full-size screenshot is kept locally; the README uses the JPG.
 docs/images/github/*.mp4
+docs/images/github/*.gif
 docs/images/github/*.png
