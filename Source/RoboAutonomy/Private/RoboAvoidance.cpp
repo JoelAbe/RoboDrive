@@ -57,12 +57,16 @@ bool RoboAvoidance::IsHeadingClear(const TArray<FVector2D>& Points, double Headi
 TOptional<double> RoboAvoidance::ChooseHeading(const FLidarScan& Scan, double GoalBearingRad,
 	const FAvoidanceSettings& Settings)
 {
+	return ChooseHeadingAmong(ScanToPoints(Scan), Scan, GoalBearingRad, Settings);
+}
+
+TOptional<double> RoboAvoidance::ChooseHeadingAmong(const TArray<FVector2D>& Points, const FLidarScan& Scan,
+	double GoalBearingRad, const FAvoidanceSettings& Settings)
+{
 	if (Scan.RangesM.Num() == 0)
 	{
 		return TOptional<double>();
 	}
-
-	const TArray<FVector2D> Points = ScanToPoints(Scan);
 
 	// Only headings the scan covers can be checked. A heading in the blind spot
 	// behind a 270 degree lidar is unknown, and unknown is not clear.
@@ -100,4 +104,62 @@ TOptional<double> RoboAvoidance::ChooseHeading(const FLidarScan& Scan, double Go
 	}
 
 	return TOptional<double>();
+}
+
+FVector2D RoboAvoidance::RobotToOdometry(const FVector2D& PointM, const FPose2D& Pose)
+{
+	// Rotate by the robot's heading, then move to where the robot is.
+	const double Cos = FMath::Cos(Pose.YawRad);
+	const double Sin = FMath::Sin(Pose.YawRad);
+	return FVector2D(
+		Pose.X + PointM.X * Cos - PointM.Y * Sin,
+		Pose.Y + PointM.X * Sin + PointM.Y * Cos);
+}
+
+FVector2D RoboAvoidance::OdometryToRobot(const FVector2D& PointM, const FPose2D& Pose)
+{
+	// The reverse, in the reverse order: move back from where the robot is,
+	// then rotate back by its heading.
+	const double DX = PointM.X - Pose.X;
+	const double DY = PointM.Y - Pose.Y;
+	const double Cos = FMath::Cos(Pose.YawRad);
+	const double Sin = FMath::Sin(Pose.YawRad);
+	return FVector2D(DX * Cos + DY * Sin, -DX * Sin + DY * Cos);
+}
+
+TArray<FVector2D> RoboAvoidance::KeepPersistent(const TArray<FVector2D>& Current,
+	const TArray<TArray<FVector2D>>& Earlier, double MatchRadiusM)
+{
+	// Squared distances throughout, so no square root is needed for each of
+	// the tens of thousands of comparisons a scan takes.
+	const double RadiusSquared = MatchRadiusM * MatchRadiusM;
+
+	TArray<FVector2D> Kept;
+	Kept.Reserve(Current.Num());
+
+	for (const FVector2D& Point : Current)
+	{
+		bool bSeenInEvery = true;
+
+		for (const TArray<FVector2D>& EarlierScan : Earlier)
+		{
+			const bool bSeen = EarlierScan.ContainsByPredicate([&Point, RadiusSquared](const FVector2D& Other)
+			{
+				return FVector2D::DistSquared(Point, Other) <= RadiusSquared;
+			});
+
+			if (!bSeen)
+			{
+				bSeenInEvery = false;
+				break;
+			}
+		}
+
+		if (bSeenInEvery)
+		{
+			Kept.Add(Point);
+		}
+	}
+
+	return Kept;
 }

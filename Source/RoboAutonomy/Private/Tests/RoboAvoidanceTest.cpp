@@ -128,4 +128,81 @@ bool FAvoidanceBlindSpotTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidanceFrameRoundTripTest,
+	"RoboDrive.RoboAutonomy.Avoidance.FrameRoundTrip", RoboTest::Flags)
+
+bool FAvoidanceFrameRoundTripTest::RunTest(const FString& Parameters)
+{
+	// The robot believes it is at (2, 3), turned a quarter left to face +Y.
+	FPose2D Pose;
+	Pose.X = 2.0;
+	Pose.Y = 3.0;
+	Pose.YawRad = UE_DOUBLE_HALF_PI;
+
+	TestTrue(TEXT("1 m ahead of it is 1 m further along +Y"),
+		RoboAvoidance::RobotToOdometry(FVector2D(1.0, 0.0), Pose).Equals(FVector2D(2.0, 4.0), 1e-9));
+	TestTrue(TEXT("1 m to its left is towards -X"),
+		RoboAvoidance::RobotToOdometry(FVector2D(0.0, 1.0), Pose).Equals(FVector2D(1.0, 3.0), 1e-9));
+
+	const FVector2D Point(0.7, -1.3);
+	TestTrue(TEXT("There and back again is where it started"),
+		RoboAvoidance::OdometryToRobot(RoboAvoidance::RobotToOdometry(Point, Pose), Pose).Equals(Point, 1e-9));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidancePersistentKeptTest,
+	"RoboDrive.RoboAutonomy.Avoidance.PersistentKept", RoboTest::Flags)
+
+bool FAvoidancePersistentKeptTest::RunTest(const FString& Parameters)
+{
+	// A post seen in all three scans, a couple of centimetres apart each time,
+	// as lidar noise would put it.
+	const TArray<FVector2D> Now = { FVector2D(2.0, 0.0) };
+	const TArray<TArray<FVector2D>> Earlier = { { FVector2D(2.02, 0.01) }, { FVector2D(1.98, -0.01) } };
+
+	TestEqual(TEXT("Seen in every scan: an obstacle"),
+		RoboAvoidance::KeepPersistent(Now, Earlier, 0.15).Num(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidanceFlickerDroppedTest,
+	"RoboDrive.RoboAutonomy.Avoidance.FlickerDropped", RoboTest::Flags)
+
+bool FAvoidanceFlickerDroppedTest::RunTest(const FString& Parameters)
+{
+	const TArray<FVector2D> Now = { FVector2D(1.0, 0.5) };
+
+	// Never seen before: a fog echo.
+	const TArray<TArray<FVector2D>> NothingBefore = { TArray<FVector2D>(), TArray<FVector2D>() };
+	TestEqual(TEXT("Seen only now: ignored"),
+		RoboAvoidance::KeepPersistent(Now, NothingBefore, 0.15).Num(), 0);
+
+	// Seen in the last scan but not the one before: two echoes that happened to
+	// land together. Every earlier scan must agree, not just one.
+	const TArray<TArray<FVector2D>> OnlyLastTime = { { FVector2D(3.0, -2.0) }, { FVector2D(1.0, 0.5) } };
+	TestEqual(TEXT("Seen in only some earlier scans: ignored"),
+		RoboAvoidance::KeepPersistent(Now, OnlyLastTime, 0.15).Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidancePersistenceRadiusTest,
+	"RoboDrive.RoboAutonomy.Avoidance.PersistenceRadius", RoboTest::Flags)
+
+bool FAvoidancePersistenceRadiusTest::RunTest(const FString& Parameters)
+{
+	const TArray<FVector2D> Now = { FVector2D(2.0, 0.0) };
+	const TArray<TArray<FVector2D>> NearBefore = { { FVector2D(2.1, 0.0) } };
+	const TArray<TArray<FVector2D>> FarBefore = { { FVector2D(2.2, 0.0) } };
+
+	TestEqual(TEXT("0.1 m away is the same thing"),
+		RoboAvoidance::KeepPersistent(Now, NearBefore, 0.15).Num(), 1);
+	TestEqual(TEXT("0.2 m away is not"),
+		RoboAvoidance::KeepPersistent(Now, FarBefore, 0.15).Num(), 0);
+
+	// No earlier scans to compare with: the filter is off, and everything counts.
+	TestEqual(TEXT("With nothing to compare against, everything is kept"),
+		RoboAvoidance::KeepPersistent(Now, TArray<TArray<FVector2D>>(), 0.15).Num(), 1);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "RoboLidar.h"
+#include "RoboOdometry.h"
 #include "RoboAvoidance.generated.h"
 
 /** Tuning for lidar obstacle avoidance. A USTRUCT so a component can expose it. */
@@ -37,6 +38,20 @@ struct FAvoidanceSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Avoidance",
 		meta = (ClampMin = "0.5", Units = "s"))
 	double BlockedTimeoutS = 5.0;
+
+	/**
+	 * How many scans in a row a return must appear in, in the same place, to
+	 * count as an obstacle. A post is still there next scan; a fog echo almost
+	 * never lands in the same spot twice. 1 turns the filter off.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Avoidance|Clutter",
+		meta = (ClampMin = "1", ClampMax = "5"))
+	int32 PersistenceScans = 3;
+
+	/** How close a return must be to one in an earlier scan to count as the same thing, m. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Avoidance|Clutter",
+		meta = (ClampMin = "0.02", Units = "m"))
+	double PersistenceRadiusM = 0.15;
 };
 
 /**
@@ -69,4 +84,27 @@ namespace RoboAvoidance
 	 */
 	ROBOAUTONOMY_API TOptional<double> ChooseHeading(const FLidarScan& Scan, double GoalBearingRad,
 		const FAvoidanceSettings& Settings);
+
+	/**
+	 * The clear heading closest to the goal's bearing among the given points,
+	 * searching outward from it. The scan says which headings the lidar can
+	 * see at all; the points say which of those are blocked. Unset if none is.
+	 */
+	ROBOAUTONOMY_API TOptional<double> ChooseHeadingAmong(const TArray<FVector2D>& Points,
+		const FLidarScan& Scan, double GoalBearingRad, const FAvoidanceSettings& Settings);
+
+	/** A point seen from the robot, placed in the odometry frame: the world as the robot believes it to be. */
+	ROBOAUTONOMY_API FVector2D RobotToOdometry(const FVector2D& PointM, const FPose2D& Pose);
+
+	/** A point in the odometry frame, as the robot sees it from where it believes it is. */
+	ROBOAUTONOMY_API FVector2D OdometryToRobot(const FVector2D& PointM, const FPose2D& Pose);
+
+	/**
+	 * The current points that were also seen, within MatchRadiusM, in every one
+	 * of the earlier scans. All in one frame that does not move with the robot,
+	 * such as odometry, so a fixed object lines up from scan to scan. With no
+	 * earlier scans, every point is kept.
+	 */
+	ROBOAUTONOMY_API TArray<FVector2D> KeepPersistent(const TArray<FVector2D>& Current,
+		const TArray<TArray<FVector2D>>& Earlier, double MatchRadiusM);
 }
