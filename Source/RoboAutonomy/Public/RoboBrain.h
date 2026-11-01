@@ -83,6 +83,12 @@ struct FBrainOutput
 
 	/** While boxed in: for how long so far, s. */
 	double BlockedForSeconds = 0.0;
+
+	/**
+	 * The returns the brain treated as obstacles, robot frame, m: what survived
+	 * the avoiding brain's clutter filter. Other brains leave it empty. For display.
+	 */
+	TArray<FVector2D> ObstaclePointsM;
 };
 
 /**

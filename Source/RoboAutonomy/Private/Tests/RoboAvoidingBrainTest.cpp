@@ -16,11 +16,24 @@ namespace
 		Inputs.Goal.ToleranceM = 0.5;
 		Inputs.bHasGoal = true;
 		Inputs.Scan = RoboTest::MakeScan(Obstacles);
+		Inputs.Scan.TimeSeconds = TimeSeconds;
 		Inputs.bHasScan = true;
 		return Inputs;
 	}
 
+	/**
+	 * A brain with the clutter filter off, so each test of avoidance itself
+	 * can decide from a single scan. The filter has its own tests below.
+	 */
 	FAvoidingBrain MakeAvoidingBrain()
+	{
+		FAvoidanceSettings Settings;
+		Settings.PersistenceScans = 1;
+		return FAvoidingBrain(FGoToGoalSettings(), Settings);
+	}
+
+	/** A brain with the clutter filter as it ships. */
+	FAvoidingBrain MakeFilteringBrain()
 	{
 		return FAvoidingBrain(FGoToGoalSettings(), FAvoidanceSettings());
 	}
@@ -137,6 +150,63 @@ bool FAvoidingArrivesTest::RunTest(const FString& Parameters)
 
 	TestEqual(TEXT("Arrived, regardless of the obstacle"), Output.Status, EMissionStatus::Arrived);
 	TestTrue(TEXT("Says it is at the goal"), Output.Activity == EBrainActivity::Arrived);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidingIgnoresFlickerTest,
+	"RoboDrive.RoboAutonomy.AvoidingBrain.IgnoresFlicker", RoboTest::Flags)
+
+bool FAvoidingIgnoresFlickerTest::RunTest(const FString& Parameters)
+{
+	// Three scans a tenth of a second apart. A return appears straight ahead
+	// in the last one only: a single fog echo. The robot must not swerve.
+	FAvoidingBrain Brain = MakeFilteringBrain();
+
+	TestTrue(TEXT("Waits until it has enough scans to judge by"),
+		Brain.Update(AvoidingInputs(5.0, 0.0, {}, 0.0)).Activity == EBrainActivity::WaitingForScan);
+	Brain.Update(AvoidingInputs(5.0, 0.0, {}, 0.1));
+
+	const FBrainOutput Output = Brain.Update(AvoidingInputs(5.0, 0.0, { FVector2D(1.0, 0.0) }, 0.2));
+	TestTrue(TEXT("A return seen once does not make it swerve"), Output.Activity == EBrainActivity::DrivingToGoal);
+	TestEqual(TEXT("And is not counted as an obstacle"), Output.ObstaclePointsM.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidingAvoidsSteadyTest,
+	"RoboDrive.RoboAutonomy.AvoidingBrain.AvoidsSteady", RoboTest::Flags)
+
+bool FAvoidingAvoidsSteadyTest::RunTest(const FString& Parameters)
+{
+	// The same obstacle in all three scans: a real one. The filter must not
+	// throw it away.
+	FAvoidingBrain Brain = MakeFilteringBrain();
+	Brain.Update(AvoidingInputs(5.0, 0.0, { FVector2D(1.0, 0.0) }, 0.0));
+	Brain.Update(AvoidingInputs(5.0, 0.0, { FVector2D(1.0, 0.0) }, 0.1));
+
+	const FBrainOutput Output = Brain.Update(AvoidingInputs(5.0, 0.0, { FVector2D(1.0, 0.0) }, 0.2));
+	TestTrue(TEXT("Steers round an obstacle that stays put"), Output.Activity == EBrainActivity::SteeringAround);
+	TestTrue(TEXT("And counts it as an obstacle"), Output.ObstaclePointsM.Num() > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAvoidingScanCountedOnceTest,
+	"RoboDrive.RoboAutonomy.AvoidingBrain.ScanCountedOnce", RoboTest::Flags)
+
+bool FAvoidingScanCountedOnceTest::RunTest(const FString& Parameters)
+{
+	// Three decisions, but the lidar has not swept again: the same scan each
+	// time. It is one scan, and must not count as three.
+	FAvoidingBrain Brain = MakeFilteringBrain();
+	FBrainInputs Inputs = AvoidingInputs(5.0, 0.0, { FVector2D(1.0, 0.0) }, 0.0);
+
+	FBrainOutput Output;
+	for (int32 Decision = 0; Decision < 3; ++Decision)
+	{
+		Inputs.SimTimeSeconds = 0.1 * Decision;
+		Output = Brain.Update(Inputs);
+	}
+
+	TestTrue(TEXT("One scan seen three times is still one scan"), Output.Activity == EBrainActivity::WaitingForScan);
 	return true;
 }
 
