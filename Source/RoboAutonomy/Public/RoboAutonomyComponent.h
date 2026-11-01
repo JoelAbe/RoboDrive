@@ -60,6 +60,14 @@ public:
 	/** Tuning for obstacle avoidance, used by the Avoiding brain. Editable during play. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Autonomy")
 	FAvoidanceSettings Avoidance;
+
+	/** Fastest the brain's commands may change, m/s per second. Abrupt changes make the wheels slip, and slip fools odometry. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Autonomy", meta = (ClampMin = "0.1"))
+	double MaxLinearAccelMS2 = 1.0;
+
+	/** Fastest the brain's turn rate may change, rad/s per second. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Autonomy", meta = (ClampMin = "0.1"))
+	double MaxAngularAccelRadS2 = 2.0;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDrawReadout = false;
@@ -105,6 +113,9 @@ private:
 	TUniquePtr<FRoboBrain> Brain;
 
 	FBrainOutput LastOutput;
+
+	/** The command as sent: the brain's, smoothed. */
+	RoboDiffDrive::FBodyVelocity SmoothedCommand;
 	
 	/** What the current brain was built from, to notice when any of it changes. */
 	EBrainKind BuiltKind = EBrainKind::Avoiding;

@@ -60,6 +60,7 @@ void URoboAutonomyComponent::HandleRobotReset()
 		Brain->Reset();
 	}
 	LastOutput = FBrainOutput();
+	SmoothedCommand = RoboDiffDrive::FBodyVelocity();
 }
 
 TUniquePtr<FRoboBrain> URoboAutonomyComponent::MakeBrain() const
@@ -152,9 +153,15 @@ void URoboAutonomyComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		// A command every decision, including a stop when there is no goal: an
 		// idle robot should stay put, and Autonomy is the lowest priority, so
 		// holding still never blocks the keyboard or an external client.
+		// Smoothed on its way to the wheels: the brain may change its mind
+		// completely between decisions, but the robot should not lurch. This is
+		// what the keyboard's ramp already does for a person driving.
+		SmoothedCommand = RoboDiffDrive::LimitAcceleration(SmoothedCommand, LastOutput.Command,
+			MaxLinearAccelMS2, MaxAngularAccelRadS2, 1.0 / UpdateRateHz);
+
 		FDriveCommand Command;
-		Command.Linear = LastOutput.Command.Linear;
-		Command.Angular = LastOutput.Command.Angular;
+		Command.Linear = SmoothedCommand.Linear;
+		Command.Angular = SmoothedCommand.Angular;
 		Command.TimeSeconds = NowSeconds;
 		Command.Source = EDriveSource::Autonomy;
 		Vehicle->SubmitDriveCommand(Command);

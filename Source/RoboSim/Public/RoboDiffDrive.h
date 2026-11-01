@@ -69,4 +69,21 @@ namespace RoboDiffDrive
 	{
 		return WheelAngularSpeed * WheelRadius;
 	}
+
+	/**
+	 * Move a command towards a target by no more than the given accelerations
+	 * allow in DeltaSeconds. A command that jumps asks the wheels for more grip
+	 * than they have: they slip, and slip is what fools wheel odometry.
+	 */
+	inline FBodyVelocity LimitAcceleration(const FBodyVelocity& Current, const FBodyVelocity& Target,
+		double MaxLinearAccelMS2, double MaxAngularAccelRadS2, double DeltaSeconds)
+	{
+		const double LinearStep = MaxLinearAccelMS2 * DeltaSeconds;
+		const double AngularStep = MaxAngularAccelRadS2 * DeltaSeconds;
+
+		FBodyVelocity Limited;
+		Limited.Linear = Current.Linear + FMath::Clamp(Target.Linear - Current.Linear, -LinearStep, LinearStep);
+		Limited.Angular = Current.Angular + FMath::Clamp(Target.Angular - Current.Angular, -AngularStep, AngularStep);
+		return Limited;
+	}
 }

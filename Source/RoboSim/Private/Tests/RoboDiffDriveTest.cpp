@@ -114,4 +114,30 @@ bool FDiffDriveRigidBodyConsistencyTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDiffDriveLimitAccelerationTest,
+	"RoboDrive.RoboSim.DiffDrive.LimitAcceleration", RoboTest::Flags)
+
+bool FDiffDriveLimitAccelerationTest::RunTest(const FString& Parameters)
+{
+	RoboDiffDrive::FBodyVelocity Stopped;
+	RoboDiffDrive::FBodyVelocity FullSpeed;
+	FullSpeed.Linear = 0.5;
+	FullSpeed.Angular = -1.0;
+
+	// One decision at 10 Hz with limits of 1 m/s2 and 2 rad/s2: at most
+	// 0.1 m/s and 0.2 rad/s of change.
+	const RoboDiffDrive::FBodyVelocity First = RoboDiffDrive::LimitAcceleration(Stopped, FullSpeed, 1.0, 2.0, 0.1);
+	TestNearlyEqual(TEXT("Speed rises by one step"), First.Linear, 0.1, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Turn rate changes by one step, keeping its sign"), First.Angular, -0.2, RoboTest::Tolerance);
+
+	// Within one step of the target, it arrives exactly rather than overshooting.
+	RoboDiffDrive::FBodyVelocity Nearly;
+	Nearly.Linear = 0.45;
+	Nearly.Angular = -0.9;
+	const RoboDiffDrive::FBodyVelocity Last = RoboDiffDrive::LimitAcceleration(Nearly, FullSpeed, 1.0, 2.0, 0.1);
+	TestNearlyEqual(TEXT("Reaches the speed"), Last.Linear, 0.5, RoboTest::Tolerance);
+	TestNearlyEqual(TEXT("Reaches the turn rate"), Last.Angular, -1.0, RoboTest::Tolerance);
+	return true;
+}
+
 #endif
