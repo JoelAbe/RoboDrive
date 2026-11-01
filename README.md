@@ -14,8 +14,9 @@ configurable noise, an external API, and a scenario test suite that runs in CI.
 > camera on a simulated clock, and estimates its own pose by dead reckoning.
 > An external TCP API lets any client drive and observe it, scenarios are
 > defined as JSON, and every push runs the full scenario suite in CI. The robot
-> drives itself to a goal, steering around obstacles its lidar sees, and fails
-> in fog for a measured, documented reason. An operator view shows what it is
+> drives itself to a goal, steering around obstacles its lidar sees. Fog first
+> defeated it for a measured, documented reason, and a filter built from that
+> diagnosis now gets it through. An operator view shows what it is
 > doing and why, with manual and automatic modes, an emergency stop, goals set
 > by clicking and a live view of what its lidar sees. See the
 > [roadmap](docs/roadmap.md).
@@ -189,19 +190,20 @@ limit, written without Unreal and reviewable in a diff. The
   noise and wheel slip each show up, measured against ground truth.
 - [Lidar profiling](docs/profiling-lidar.md) — sensor cost against ray count,
   and the measured real-time ceiling.
-- [Fog](docs/fog.md) — how fog defeats the obstacle avoidance: not by
-  shortening the lidar's range, but by clutter that makes the steering jitter,
-  the wheels slip and odometry claim arrival at a goal not reached.
+- [Fog](docs/fog.md) — how fog defeated the obstacle avoidance: not by
+  shortening the lidar's range, but by clutter that made the steering jitter,
+  the wheels slip and odometry claim arrival at a goal not reached. Then the
+  fix, a filter for returns that do not persist, measured the same way.
 
 ## Limitations and next steps
 
 What this does not do yet, and what would come next:
 
-- **Fog defeats the avoidance.** The brain trusts every lidar return, so fog
-  echoes look like obstacles. Filtering returns that do not persist across
-  scans, and ramping the brain's commands, would fix it; `slalom_fog` would
-  then report `XPASS` and become a regression test.
-  ([fog.md](docs/fog.md))
+- **The clutter filter assumes a still world.** It ignores returns that do not
+  persist from scan to scan, which removes fog echoes but would also remove
+  anything moving faster than about 1.5 m/s, and it notices new obstacles a
+  fifth of a second late.
+  ([ADR 0016](docs/decisions/0016-clutter-filter-and-command-smoothing.md))
 - **No ROS 2 bridge.** The API, the REP-103 frames and the LaserScan-shaped
   lidar data are built for one, as Phase 6 of the [roadmap](docs/roadmap.md).
 - **Scenarios do not detect collisions.** A run passes on reaching the goal,

@@ -81,7 +81,9 @@ Fog is modelled as range loss and clutter on the lidar
 ([ADR 0011](decisions/0011-fog-as-lidar-attenuation-and-clutter.md)). The
 documented failure is in [fog.md](fog.md): clutter, not lost range, defeats the
 avoidance, paralysing the robot in dense fog and, in light fog, corrupting its
-odometry until it claims to have arrived short of the goal.
+odometry until it claims to have arrived short of the goal. A clutter filter
+built from that diagnosis then fixed it, measured with the same sweep
+([ADR 0016](decisions/0016-clutter-filter-and-command-smoothing.md)).
 
 ## Phase 5: Operator view
 

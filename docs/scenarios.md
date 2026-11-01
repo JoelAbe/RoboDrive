@@ -89,10 +89,12 @@ The level does not look foggy: nothing here changes rendering. In play, fog
 echoes are drawn in cyan and returns from real surfaces in orange. The brain
 receives both as identical ranges, since a real sensor cannot tell them apart.
 
-`slalom_fog` is the slalom with 10 m visibility and nothing else changed. It is
-a known failure: avoidance treats fog echoes as obstacles and steers around the
-fog itself. How the robot fails across a range of visibilities, and why, is
-measured in [fog.md](fog.md).
+`slalom_fog` is the slalom with 10 m visibility and nothing else changed. It
+began as a known failure, when avoidance treated fog echoes as obstacles and
+steered around the fog itself. A clutter filter now ignores returns that do
+not persist from scan to scan, and the scenario guards it: if the filter
+breaks, it fails. Both the failure and the fix are measured in
+[fog.md](fog.md).
 
 ## What a pass does not check
 

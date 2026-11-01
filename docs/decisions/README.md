@@ -24,3 +24,4 @@ discussed, so this list stays a description of the project rather than a plan.
 | [0013](0013-operator-modes-and-emergency-stop.md) | Make modes a gate and the emergency stop a latch | Accepted |
 | [0014](0014-operator-view-in-slate.md) | Build the operator view in Slate, fed by a telemetry snapshot | Accepted |
 | [0015](0015-scenario-loading-in-the-simulation.md) | Load scenarios in the simulation, read scenario files in the client | Accepted |
+| [0016](0016-clutter-filter-and-command-smoothing.md) | Filter lidar clutter by persistence, and smooth the brain's commands | Accepted |

@@ -55,9 +55,11 @@ its own frame, facing up: the lidar returns, the direction it believes the goal
 is in, the heading it chose, and the corridor it checked along that heading.
 Range rings mark each metre, out to 5 m.
 
-It is drawn from exactly what the brain receives. Fog echoes therefore look
-like any other return, because to the brain they are, and the goal direction
-comes from odometry, so it is wrong when odometry is.
+It is drawn from exactly what the brain receives, and the goal direction
+comes from odometry, so it is wrong when odometry is. Every return is drawn
+faintly, and the ones the avoiding brain kept as obstacles are drawn over them
+in orange: the faint ones left showing are what its clutter filter ignored,
+because they did not persist from scan to scan. In fog, those are the echoes.
 
 ## Goals
 
@@ -88,11 +90,15 @@ Below the scenario panel. Every change applies at once.
 - **Max speed**, **avoidance lookahead** and **avoidance margin**. Changing a
   brain setting rebuilds the brain, so it forgets what it remembered: whether
   it had arrived, and how long it had been boxed in.
+- **Clutter filter**: On, the avoiding brain ignores returns that do not
+  persist across three scans. Off, it trusts every return, which shows the
+  fog failure the filter fixes.
 - **Weather**: Clear or Fog. In fog, the **visibility** slider runs from 5 m to
   200 m on a logarithmic scale, because visibility matters across orders of
   magnitude. **Lidar fog echoes** sets how readily the lidar mistakes fog for a
-  target; at zero, fog only shortens its range. Setting it to zero in thick fog
-  shows the finding in [fog.md](fog.md): the robot recovers.
+  target; at zero, fog only shortens its range. With the clutter filter off,
+  setting it to zero in thick fog shows the finding in [fog.md](fog.md): the
+  robot recovers.
 - **Show in the world**: lidar rays, the odometry and true paths, the brain's
   chosen heading, and the floating text readouts, which start hidden because
   the panels show the same information.

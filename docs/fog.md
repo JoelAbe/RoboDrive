@@ -1,4 +1,4 @@
-# Fog: a documented failure
+# Fog: a documented failure, and its fix
 
 The robot steers around obstacles using its lidar. These runs measure what
 fog does to that, using the simulation's ground truth as the reference.
@@ -8,6 +8,10 @@ range. Below about 20 m visibility the robot is paralysed. Above it, the robot
 still moves, but its steering becomes jittery, its wheel odometry drifts, and it
 announces it has arrived when it has not. In light haze, 2 runs in 3 fail that
 way.
+
+The fix followed from the diagnosis: ignore returns that do not persist from
+scan to scan, and smooth the brain's commands. With it, every fog run in the
+same sweep reached the goal, down to 5 m visibility. See [The fix](#the-fix).
 
 ## The fog model
 
@@ -38,9 +42,10 @@ The scenario is the slalom: three posts on the line to a goal 10 m ahead,
 
 ## In one comparison
 
-The slalom at 10 m visibility, the same start, one setting changed. With fog
-echoes on, the robot is boxed in by echoes close around it and barely moves.
-With them off, leaving only the shorter range, it drives through.
+Before the fix: the slalom at 10 m visibility, the same start, one setting
+changed. With fog echoes on, the robot is boxed in by echoes close around it
+and barely moves. With them off, leaving only the shorter range, it drives
+through.
 
 
 
@@ -53,6 +58,9 @@ https://github.com/user-attachments/assets/7a902f67-fafe-449e-8b7a-14f487ca6c3b
 
 
 ## Results
+
+These runs were made before the clutter filter existed. The same sweep after
+it is under [The fix](#the-fix).
 
 ### The slalom
 
@@ -176,31 +184,85 @@ lidar, and the link between them is the controller.
 - **Fog echoes are independent from beam to beam and scan to scan.** Real fog
   has structure, such as denser patches, which this model does not have.
 
-## What would fix it
+## The fix
 
-None of these is implemented. In rough order of how directly each addresses
-the failure:
+Two changes, each aimed at one link in the chain the runs above uncovered
+([ADR 0016](decisions/0016-clutter-filter-and-command-smoothing.md)):
 
-- **Filter clutter before avoiding it.** Fog echoes flicker; posts persist.
-  Requiring a return to appear in consecutive scans, or in a cluster of
-  neighbouring beams, before treating it as an obstacle would remove most fog
-  echoes and keep every real obstacle.
+- **A clutter filter.** A return counts as an obstacle only if one was seen
+  within 0.15 m of it in each of the previous two scans. A post is still there
+  next scan; a fog echo almost never lands in the same spot twice. Scans are
+  compared in the odometry frame, so a fixed object lines up however the robot
+  moved in between. This removes the cause: echoes no longer block corridors,
+  so the heading no longer jumps.
+- **Smoothed commands.** The brain's commands are limited to 1 m/s² and
+  2 rad/s² on their way to the wheels. This removes the amplifier: even when
+  the brain changes its mind, the wheels are not asked for more grip than they
+  have, so they do not slip.
+
+Three scans and 0.15 m were chosen in a quick 2D model before any code was
+written: two scans let enough echoes through to fail at 5 m, three did not.
+
+### The slalom sweep, after
+
+The same sweep, headless, with the filter and smoothing in place, extended to
+5 m visibility:
+
+| Visibility | Lidar sees to | Fog echoes on | Fog echoes off |
+|---|---|---|---|
+| clear | 12.0 m | 3/3, 22.0 s | |
+| 100 m | 8.6 m | 3/3, 22.0 s | 3/3, 22.0 s |
+| 50 m | 7.0 m | 3/3, 21.9 s | 3/3, 22.0 s |
+| 30 m | 5.7 m | 3/3, 22.1 s | 3/3, 22.1 s |
+| 20 m | 4.7 m | 3/3, 22.1 s | 3/3, 21.9 s |
+| 15 m | 4.1 m | 3/3, 22.4 s | 3/3, 22.0 s |
+| 10 m | 3.3 m | 3/3, 23.6 s | 3/3, 22.0 s |
+| 5 m | 2.2 m | 3/3, 54.1 s | 3/3, 22.0 s |
+
+Against the runs before the fix, with fog echoes on:
+
+| | Before | After |
+|---|---|---|
+| Runs that reached the goal, 100 m to 10 m | 3 of 18 | 18 of 18 |
+| False arrivals | 8 | 0 |
+| Odometry error at the end, 100 m to 10 m | 0.17 to 1.78 m | 0.00 to 0.18 m |
+| Time to the goal at 10 m | never reached | 23.6 s |
+
+What the after runs show:
+
+- **Down to 10 m, fog barely matters.** Times stay within two seconds of clear
+  air, and odometry stays within a few centimetres, as it does without echoes.
+  The filter removes the clutter, and with it the jitter and the slip.
+- **At 5 m it gets through, slowly.** At that density enough echoes coincide
+  across three scans to survive the filter now and then. The robot stops and
+  turns more often, takes over 50 s against a 60 s limit, and its odometry
+  error reaches 0.46 m in one run. That is the edge of what this filter can do.
+- **Clear air costs a little.** About half a second on the slalom, from the
+  smoothing, and a fifth of a second at every start while three scans arrive.
+
+The finding before the fix still stands: clutter, not range, was the problem.
+The fix only had to address clutter.
+
+## What else would help
+
+Not implemented, and each would add to the filter rather than replace it:
+
 - **Use the last echo.** Many lidars can report several echoes per pulse. The
-  last one usually comes from the solid surface behind the fog.
-- **Smooth the commands.** An acceleration limit between the brain and the
-  wheels would stop jittery decisions becoming slip.
+  last one usually comes from the solid surface behind the fog, which would
+  remove most clutter at the sensor.
 - **Navigate on more than wheel odometry.** The gyro's heading stayed within
   about a degree in [the drift measurements](odometry-drift.md) while odometry
   drifted by up to 25°. Fusing the two, as `robot_localization` does in ROS,
-  limits what slip can do to the estimate.
+  limits what any remaining slip can do to the estimate.
 - **Give up on lack of progress, not on continuous blocking,** so a flickering
   blockage is reported as a failure instead of running out the clock.
 
 ## The scenario
 
-`Scenarios/slalom_fog.json` is the slalom at 10 m visibility, marked as a known
-failure. It runs in CI with the rest of the suite. When a fix makes it pass,
-the harness reports `XPASS` and fails the run until the marker is removed.
+`Scenarios/slalom_fog.json` is the slalom at 10 m visibility. It was marked as
+a known failure until the fix, when the harness reported `XPASS` and refused to
+pass until the marker was removed. It now runs in CI as a regression test: if
+the clutter filter breaks, it fails.
 
 ## Reproducing
 
@@ -211,8 +273,11 @@ Headless, with the editor closed, in about two minutes:
 ./Tools/RunScenarios.ps1 -Script Tools\Analysis\fog_sweep.py -ScriptArgs "--without-obstacles --visibilities 100 50 30"
 ```
 
-Or against the editor while playing, in real time, which for the first takes
-about half an hour:
+The results before the fix were recorded without the clutter filter. To
+reproduce them, switch the filter off, in the operator view's tuning panel or
+by setting **Persistence Scans** to 1 on the autonomy component, and run the
+sweep against the editor while playing, in real time, which takes about half
+an hour:
 
 ```
 python Tools/Analysis/fog_sweep.py
