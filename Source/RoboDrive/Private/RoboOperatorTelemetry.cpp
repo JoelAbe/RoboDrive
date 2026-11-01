@@ -81,6 +81,11 @@ FRoboOperatorTelemetry FRoboOperatorTelemetry::Gather(const APlayerController* P
 			Out.ChosenHeadingRad = Last.ChosenHeadingRad;
 			Out.CorridorLengthM = Autonomy->Avoidance.LookaheadM;
 			Out.CorridorHalfWidthM = Autonomy->Avoidance.RobotHalfWidthM + Autonomy->Avoidance.MarginM;
+
+			// Which returns the brain kept as obstacles. Only the avoiding brain
+			// filters, so only it reports them.
+			Out.bHasObstaclePoints = Autonomy->BrainKind == EBrainKind::Avoiding;
+			Out.ObstaclePointsM = Last.ObstaclePointsM;
 		}
 	}
 

@@ -135,11 +135,25 @@ int32 SRoboLidarView::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedG
 		DrawLines(Outline, RoboOperatorStyle::External().GetSpecifiedColor().CopyWithNewOpacity(0.6f), 1.0f, DecisionLayer);
 	}
 
-	// What the lidar returned, exactly as the brain received it.
+	// What the lidar returned, exactly as the brain received it. When the
+	// brain filters clutter, every return is drawn faintly first, and the ones
+	// it kept as obstacles are drawn over them in full colour: the faint ones
+	// left showing are what it ignored. Without a filter, every return counts.
 	const FLinearColor ReturnColour = RoboOperatorStyle::LidarReturn().GetSpecifiedColor();
+	const FLinearColor IgnoredColour = RoboOperatorStyle::TextFaint().GetSpecifiedColor();
+
 	for (const FVector2D& PointM : View.ScanPointsM)
 	{
-		DrawSquare(ToView(PointM), FVector2f(3.0f, 3.0f), ReturnColour, ReturnLayer);
+		DrawSquare(ToView(PointM), FVector2f(3.0f, 3.0f),
+			View.bHasObstaclePoints ? IgnoredColour : ReturnColour, ReturnLayer);
+	}
+
+	if (View.bHasObstaclePoints)
+	{
+		for (const FVector2D& PointM : View.ObstaclePointsM)
+		{
+			DrawSquare(ToView(PointM), FVector2f(3.0f, 3.0f), ReturnColour, ReturnLayer);
+		}
 	}
 
 	// The chosen heading, as an arrow the length of the corridor, matching

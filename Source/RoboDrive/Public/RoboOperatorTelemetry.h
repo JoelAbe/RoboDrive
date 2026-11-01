@@ -53,6 +53,8 @@ struct FRoboOperatorTelemetry
 	TOptional<double> ChosenHeadingRad;
 	double CorridorLengthM = 0.0;
 	double CorridorHalfWidthM = 0.0;
+	bool bHasObstaclePoints = false;
+	TArray<FVector2D> ObstaclePointsM;
 	
 	// The operator's choices
 	EDriveMode DriveMode = EDriveMode::Auto;

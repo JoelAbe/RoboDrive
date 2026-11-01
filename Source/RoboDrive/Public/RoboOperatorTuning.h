@@ -21,6 +21,7 @@ struct FRoboOperatorTuning
 	double MaxSpeedMS = 0.5;
 	double LookaheadM = 1.5;
 	double MarginM = 0.15;
+	bool bClutterFilter = true;
 
 	// The weather, and how the lidar copes with it
 	bool bFog = false;

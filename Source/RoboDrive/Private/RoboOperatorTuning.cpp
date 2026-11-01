@@ -46,6 +46,7 @@ FRoboOperatorTuning FRoboOperatorTuning::Read(const APlayerController* Player)
 		Out.MaxSpeedMS = Autonomy->GoToGoal.MaxSpeedMS;
 		Out.LookaheadM = Autonomy->Avoidance.LookaheadM;
 		Out.MarginM = Autonomy->Avoidance.MarginM;
+		Out.bClutterFilter = Autonomy->Avoidance.PersistenceScans > 1;
 		Out.bShowHeading = Autonomy->bDrawChosenHeading;
 	}
 
@@ -98,6 +99,13 @@ void FRoboOperatorTuning::Apply(const APlayerController* Player) const
 		Autonomy->GoToGoal.MaxSpeedMS = MaxSpeedMS;
 		Autonomy->Avoidance.LookaheadM = LookaheadM;
 		Autonomy->Avoidance.MarginM = MarginM;
+
+		// Only when switched, so a scan count set in the Details panel is not
+		// overwritten by every other change made from the panel.
+		if (bClutterFilter != (Autonomy->Avoidance.PersistenceScans > 1))
+		{
+			Autonomy->Avoidance.PersistenceScans = bClutterFilter ? FAvoidanceSettings().PersistenceScans : 1;
+		}
 		Autonomy->bDrawChosenHeading = bShowHeading;
 		Autonomy->bDrawReadout = bShowReadouts;
 	}

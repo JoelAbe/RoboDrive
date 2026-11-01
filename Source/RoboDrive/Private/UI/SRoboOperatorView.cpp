@@ -1187,6 +1187,47 @@ TSharedRef<SWidget> SRoboOperatorView::MakeTuningPanel()
 					}))
 			]
 
+			// The clutter filter: on, avoidance ignores returns that do not
+			// persist from scan to scan, which is what fog echoes do. Off shows
+			// the failure the filter fixes. Used only by the avoiding brain.
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 12.0f, 0.0f, 6.0f)
+			[
+				OperatorSectionLabel(INVTEXT("Clutter filter"))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					OperatorChoice(INVTEXT("On"),
+						TAttribute<bool>::CreateLambda([this] { return Tuning.bClutterFilter; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bClutterFilter = true; });
+							return FReply::Handled();
+						}))
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(6.0f, 0.0f, 0.0f, 0.0f)
+				[
+					OperatorChoice(INVTEXT("Off"),
+						TAttribute<bool>::CreateLambda([this] { return !Tuning.bClutterFilter; }),
+						FOnClicked::CreateLambda([this]
+						{
+							ChangeTuning([](FRoboOperatorTuning& T) { T.bClutterFilter = false; });
+							return FReply::Handled();
+						}))
+				]
+			]
+
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0.0f, 16.0f, 0.0f, 12.0f)
@@ -1606,7 +1647,7 @@ TSharedRef<SWidget> SRoboOperatorView::MakeLidarPanel()
 				.Padding(0.0f, 2.0f, 0.0f, 0.0f)
 				[
 					SNew(STextBlock)
-					.Text(INVTEXT("Lidar returns as the brain receives them. In fog, echoes look like obstacles."))
+					.Text(INVTEXT("Lidar returns as the brain receives them. Grey ones it judged to be clutter, and ignored."))
 					.Font(LabelFont())
 					.ColorAndOpacity(TextMuted())
 					.AutoWrapText(true)
@@ -1628,7 +1669,8 @@ TSharedRef<SWidget> SRoboOperatorView::MakeLidarPanel()
 					// for all three, rather than running past the panel's edge.
 					SNew(SWrapBox)
 					.UseAllottedSize(true)
-					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Returns"), LidarReturn()) ]
+					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Obstacles"), LidarReturn()) ]
+					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Ignored"), TextFaint()) ]
 					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Goal, as believed"), Normal()) ]
 					+ SWrapBox::Slot().Padding(0.0f, 0.0f, 0.0f, 4.0f) [ KeyEntry(INVTEXT("Chosen heading"), External()) ]
 				]
