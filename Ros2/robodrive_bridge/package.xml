@@ -4,7 +4,7 @@
   <name>robodrive_bridge</name>
   <version>0.1.0</version>
   <description>Bridges the RoboDrive Unreal simulation to ROS 2 over its TCP API: sensors and simulation time out, velocity commands in.</description>
-  <maintainer email="developer@arbadev.com">Joel Abraham Orethu</maintainer>
+  <maintainer email="joelorethu@gmail.com">Joel Abraham Orethu</maintainer>
   <license>MIT</license>
 
   <exec_depend>rclpy</exec_depend>

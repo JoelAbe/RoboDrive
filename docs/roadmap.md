@@ -105,10 +105,17 @@ finding that a click sets a goal, led to a more prominent hint.
 
 ## Phase 6: ROS 2 adapter
 
-A bridge running in Docker that is just another client of the Phase 3 API,
-publishing sensor topics and `/clock`, and subscribing to `/cmd_vel`.
+A bridge that is just another client of the Phase 3 API, publishing sensor
+topics and `/clock`, and subscribing to `/cmd_vel`.
 
 **Done when:** a ROS 2 node drives the robot in sim time, visualised in RViz.
+
+The plan was to run the bridge in Docker, but neither Docker nor WSL2 could be
+installed on the development machine, so it runs on ROS 2 Lyrical natively on
+Windows ([ADR 0017](decisions/0017-ros2-bridge-as-an-api-client.md)). A goal
+driver node drives the robot on `/clock` time, in the editor and headless at
+several times real time, and RViz shows the scan, odometry and ground truth
+([ros2.md](ros2.md)).
 
 ## Out of scope
 

@@ -8,7 +8,7 @@ A ground-robot simulation built in Unreal Engine 5.8. Not a game: a simulation
 platform with real differential-drive kinematics, sensor models with
 configurable noise, an external API, and a scenario test suite that runs in CI.
 
-> **Status:** Phases 0 to 5 of 6 complete. The
+> **Status:** All six phases complete. The
 > robot drives from velocity commands through real differential-drive
 > kinematics on Chaos physics, carries wheel encoders, an IMU, a lidar and a
 > camera on a simulated clock, and estimates its own pose by dead reckoning.
@@ -18,8 +18,9 @@ configurable noise, an external API, and a scenario test suite that runs in CI.
 > defeated it for a measured, documented reason, and a filter built from that
 > diagnosis now gets it through. An operator view shows what it is
 > doing and why, with manual and automatic modes, an emergency stop, goals set
-> by clicking and a live view of what its lidar sees. See the
-> [roadmap](docs/roadmap.md).
+> by clicking and a live view of what its lidar sees. A ROS 2 bridge publishes
+> its sensors and simulation time, and a ROS node can drive it, watched in
+> RViz. See the [roadmap](docs/roadmap.md).
 
 ## Requirements
 
@@ -29,6 +30,8 @@ configurable noise, an external API, and a scenario test suite that runs in CI.
 - Python 3.10 or newer. The API client and scenario harness use only the
   standard library; the run analysis also needs `pandas` and `matplotlib`
   (`pip install -r Tools/Analysis/requirements.txt`).
+- Optionally, ROS 2 Lyrical, for the ROS 2 bridge. [ros2.md](docs/ros2.md)
+  covers installing it on Windows.
 
 ## Build
 
@@ -177,6 +180,23 @@ with SimClient() as client:
     print(client.call("get_sensors", include_lidar=False))
 ```
 
+## ROS 2
+
+`Ros2/robodrive_bridge` is a ROS 2 package whose bridge node is one more client
+of that API. It publishes `/clock`, `/scan`, `/odom`, `/imu` and their
+transforms in simulation time, and forwards `/cmd_vel` to the robot. A small
+goal driver node drives the robot to goals set in RViz, on `/clock` time, in the
+editor or headless at several times real time.
+
+```powershell
+. .\Tools\RosEnv.ps1
+ros2 launch robodrive_bridge robodrive.launch.py
+```
+
+[ros2.md](docs/ros2.md) covers installing ROS 2 on Windows, the topics and
+frames, and what was measured.
+([ADR 0017](docs/decisions/0017-ros2-bridge-as-an-api-client.md))
+
 ## Scenarios
 
 Scenarios are JSON files describing a start, obstacles, a goal and a time
@@ -204,8 +224,13 @@ What this does not do yet, and what would come next:
   anything moving faster than about 1.5 m/s, and it notices new obstacles a
   fifth of a second late.
   ([ADR 0016](docs/decisions/0016-clutter-filter-and-command-smoothing.md))
-- **No ROS 2 bridge.** The API, the REP-103 frames and the LaserScan-shaped
-  lidar data are built for one, as Phase 6 of the [roadmap](docs/roadmap.md).
+- **The ROS 2 bridge has only run on Windows.** It is plain `rclpy` with
+  nothing Windows-specific, but most ROS work happens on Ubuntu, where it has
+  not been tried. It also holds the API's single connection, so it cannot run
+  alongside the scenario runner, and its tests are not in CI.
+  ([ADR 0017](docs/decisions/0017-ros2-bridge-as-an-api-client.md))
+- **The ROS goal driver stops for obstacles rather than avoiding them.** It
+  demonstrates driving over ROS; avoidance under ROS would come from Nav2.
 - **Scenarios do not detect collisions.** A run passes on reaching the goal,
   even if the robot scraped something on the way.
 - **The API is advance-and-wait, not lockstep.** Results are reproducible to
@@ -231,9 +256,12 @@ Source/
 Content/              level, Blueprints and input assets
 Config/               project settings (edited through the editor)
 Scenarios/            scenario files for the test suite
+Ros2/
+  robodrive_bridge/   ROS 2 package: bridge, goal driver, launch file, RViz config
 Tools/
   RunTests.ps1        build and run the unit tests
   RunScenarios.ps1    run the scenario suite headless
+  RosEnv.ps1          set up ROS 2 in a PowerShell session
   Analysis/           Python: API client, scenario harness, fog sweep, run analysis
 docs/                 roadmap, references, measurements and decision records
 .github/workflows/    CI
