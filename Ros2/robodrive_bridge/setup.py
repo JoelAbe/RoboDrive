@@ -17,7 +17,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Joel Abraham Orethu',
-    maintainer_email='developer@arbadev.com',
+    maintainer_email='joelorethu@gmail.com',
     description='Bridges the RoboDrive Unreal simulation to ROS 2.',
     license='MIT',
     tests_require=['pytest'],

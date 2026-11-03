@@ -10,6 +10,14 @@ The simulation itself knows nothing about ROS.
 The package also has a small ROS node that drives the robot to a goal on
 simulation time, and a launch file that starts both with RViz.
 
+![The editor and RViz side by side. The operator view reports the robot is driven by an External source while the in-engine brain waits for a goal. RViz shows the odometry trail in red, turning on the spot and heading for a goal set with 2D Goal Pose, the true pose in green at its end, and the lidar returns from two walls ahead in orange](images/ros2-rviz.jpg)
+
+The operator view says *Driving: External*: the robot is following the goal
+driver's commands, sent through ROS, while the in-engine brain waits. In RViz
+the red arrows are odometry's trail, with a fan where the robot turned on the
+spot towards the goal, the green arrow is the true pose, and the orange squares
+are the lidar's view of the two walls ahead.
+
 ## What it publishes
 
 | Topic | Type | |
