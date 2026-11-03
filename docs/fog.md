@@ -203,6 +203,10 @@ Two changes, each aimed at one link in the chain the runs above uncovered
 Three scans and 0.15 m were chosen in a quick 2D model before any code was
 written: two scans let enough echoes through to fail at 5 m, three did not.
 
+
+https://github.com/user-attachments/assets/6251dc51-c561-4e1d-b628-69ba911a41a3
+
+
 ### The slalom sweep, after
 
 The same sweep, headless, with the filter and smoothing in place, extended to
