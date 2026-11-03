@@ -85,6 +85,11 @@ DerivedDataCache/*
 *.venv/
 __pycache__/
 
+# colcon's output when building the ROS 2 packages
+Ros2/build/
+Ros2/install/
+Ros2/log/
+
 # Demo videos and GIFs are uploaded or hosted elsewhere rather than committed:
 # video in git weighs down every clone, and does not play inline from the repo.
 # The full-size screenshot is kept locally; the README uses the JPG.
