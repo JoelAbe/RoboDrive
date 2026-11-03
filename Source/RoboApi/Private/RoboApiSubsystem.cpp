@@ -486,7 +486,16 @@ bool URoboApiSubsystem::Dispatch(const FString& Operation, const TSharedPtr<FJso
 		// so that autonomy cannot reach it by accident.
 		if (const URoboOdometryComponent* Odometry = Vehicle->FindComponentByClass<URoboOdometryComponent>())
 		{
-			OutResult->SetObjectField(TEXT("odometry"), ApiMakePose(Odometry->GetEstimatedPose()));
+			// The velocity the encoders measured, not one differentiated from
+			// poses: that is what wheel odometry on a real robot reports, and it
+			// is timestamped with the sample it came from.
+			TSharedRef<FJsonObject> OdometryObject = ApiMakePose(Odometry->GetEstimatedPose());
+			const RoboDiffDrive::FBodyVelocity Velocity = Odometry->GetEstimatedVelocity();
+			OdometryObject->SetNumberField(TEXT("v"), Velocity.Linear);
+			OdometryObject->SetNumberField(TEXT("w"), Velocity.Angular);
+			OdometryObject->SetNumberField(TEXT("time"), Odometry->GetEstimateTimeSeconds());
+
+			OutResult->SetObjectField(TEXT("odometry"), OdometryObject);
 			OutResult->SetNumberField(TEXT("travelled_m"), Odometry->GetTravelledM());
 		}
 

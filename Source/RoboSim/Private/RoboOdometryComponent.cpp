@@ -47,6 +47,7 @@ void URoboOdometryComponent::ResetOdometry()
 	// The estimate starts correct. Everything after this is accumulated error.
 	TruePose = ReadTruePose();
 	EstimatedPose = TruePose;
+	EstimatedVelocity = RoboDiffDrive::FBodyVelocity();
 
 	TravelledM = 0.0;
 
@@ -60,6 +61,7 @@ void URoboOdometryComponent::ResetOdometry()
 	if (const URoboSimSubsystem* Sim = URoboSimSubsystem::Get(this))
 	{
 		NextSampleTimeSeconds = Sim->GetSimTimeSeconds();
+		EstimateTimeSeconds = NextSampleTimeSeconds;
 	}
 }
 
@@ -112,6 +114,7 @@ void URoboOdometryComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	while (NowSeconds >= NextSampleTimeSeconds && SamplesThisTick < OdometryMaxSamplesPerTick)
 	{
 		SampleOnce(IntervalSeconds);
+		EstimateTimeSeconds = NextSampleTimeSeconds;
 		NextSampleTimeSeconds += IntervalSeconds;
 		++SamplesThisTick;
 	}
@@ -164,6 +167,7 @@ void URoboOdometryComponent::SampleOnce(double DeltaSeconds)
 		RoboDiffDrive::ToBodyVelocity(MeasuredSpeeds, AssumedSeparationM);
 
 	EstimatedPose = RoboOdometry::Integrate(EstimatedPose, MeasuredVelocity, DeltaSeconds);
+	EstimatedVelocity = MeasuredVelocity;
 	TruePose = ReadTruePose();
 
 	if (!bDrawTrails)

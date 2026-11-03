@@ -89,6 +89,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Odometry")
 	double GetTravelledM() const { return TravelledM; }
 
+	/** Body velocity measured by the encoders over the last sample, REP-103. */
+	RoboDiffDrive::FBodyVelocity GetEstimatedVelocity() const { return EstimatedVelocity; }
+
+	/** Simulation time of the last encoder sample, s. */
+	double GetEstimateTimeSeconds() const { return EstimateTimeSeconds; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
@@ -106,6 +112,8 @@ private:
 
 	FPose2D EstimatedPose;
 	FPose2D TruePose;
+	RoboDiffDrive::FBodyVelocity EstimatedVelocity;
+	double EstimateTimeSeconds = 0.0;
 
 	FWheelEncoder LeftEncoder;
 	FWheelEncoder RightEncoder;

@@ -149,6 +149,8 @@ What the robot could know. **Autonomy should read only this.**
 |---|---|
 | `sim_time` | Simulation time of the reply |
 | `odometry` | Pose estimated from wheel encoders: `{x, y, yaw}` |
+| `odometry.v`, `odometry.w` | Linear and angular velocity the encoders measured over their last sample, m/s and rad/s, in the robot's frame |
+| `odometry.time` | Simulation time of the last encoder sample |
 | `travelled_m` | Distance the encoders believe has been travelled |
 | `imu.accel` | Specific force `[x, y, z]`, m/s². Reads about +9.81 on z at rest. |
 | `imu.gyro` | Angular velocity `[x, y, z]`, rad/s |
